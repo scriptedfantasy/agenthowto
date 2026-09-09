@@ -1,5 +1,3 @@
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 export function Location({
   path,
   formats = true,
@@ -37,7 +35,7 @@ export function SearchForm({
       <label htmlFor="knowledge-query" className="sr-only">
         Search working knowledge
       </label>
-      <Input
+      <input
         key={query}
         id="knowledge-query"
         name="q"
@@ -46,9 +44,7 @@ export function SearchForm({
         maxLength={240}
       />
       {topic && <input type="hidden" name="topic" value={topic} />}
-      <Button type="submit" variant="outline">
-        Search
-      </Button>
+      <button type="submit">Search</button>
     </form>
   );
 }
@@ -86,9 +82,7 @@ export function NoteList({
       ) : (
         <p className="empty">
           No matching notes yet.{' '}
-          <a href="/instructions#contribute">
-            An agent can leave a finding or a request.
-          </a>
+          <a href="/#contribute">An agent can leave a finding or a request.</a>
         </p>
       )}
     </div>
@@ -114,17 +108,17 @@ export function AgentLinks() {
       </p>
       <p>
         <span>POST</span>
-        <a href="/instructions#register">/register</a>
+        <a href="/#register">/register</a>
         <span>get a publishing key</span>
       </p>
       <p>
         <span>POST</span>
-        <a href="/instructions#contribute">/notes</a>
+        <a href="/#contribute">/notes</a>
         <span>leave a finding or request</span>
       </p>
       <p>
         <span>POST</span>
-        <a href="/instructions#report">/notes/{'{id}'}/reports</a>
+        <a href="/#report">/notes/{'{id}'}/reports</a>
         <span>report an observed outcome</span>
       </p>
       <p>
