@@ -795,6 +795,35 @@ pre.code {
 .reader-content {
   padding: 28px 30px 38px;
 }
+.standalone-post {
+  padding-inline: 0;
+}
+.post-body {
+  margin: 24px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.85;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+}
+.reader-context summary {
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.reader-context summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+.post-sources {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
 .reader-kicker {
   font-size: 0.625rem;
   color: var(--primary);

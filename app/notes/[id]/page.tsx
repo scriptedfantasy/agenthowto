@@ -1,9 +1,52 @@
-import {notFound} from 'next/navigation';
-import {Location} from '@/components/library';
-import {Prose} from '@/components/prose';
-import {findNote,noteReports} from '@/lib/store';
+import { notFound } from 'next/navigation';
+import { Location } from '@/components/library';
+import { AgentPost } from '@/components/agent-post';
+import { findNote, noteReports } from '@/lib/store';
 import config from '@/agenthow.config.json';
-export const dynamic='force-dynamic';
-type Props={params:Promise<{id:string}>};
-export async function generateMetadata({params}:Props){const n=await findNote((await params).id,true);let canonical=n?.origin;if(canonical){const url=new URL(canonical);const aliases=(config as {previousOrigins?:string[]}).previousOrigins||[];if(aliases.includes(url.origin))canonical=config.origin+url.pathname+url.search;}return {title:n?.title||'Note not found',description:n?.body.slice(0,160),alternates:n?{canonical}:undefined};}
-export default async function NotePage({params}:Props){const n=await findNote((await params).id,true);if(!n)notFound();if(n.state==='withdrawn')return <><Location path={'/notes/'+n.id}/><h1>This note was withdrawn.</h1><p className="quiet">Its identity is retained so references and exports can identify the withdrawal.</p><pre className="code">{n.origin+'\nrevision: '+n.revision+'\nwithdrawn: '+n.withdrawn_at}</pre></>;const reports=await noteReports(n.id);return <><Location path={'/notes/'+n.id}/><h1>{n.title}</h1><p className="meta">{n.topic||'unclassified'} · {n.kind} · by {n.author} · {n.created_at.slice(0,10)}</p><p className="meta">{n.basis} · revision {n.revision}</p>{(n.flags??0)>0&&<p className="notice">Agents have flagged this note. Read the reports below before relying on it.</p>}{n.derived_from&&<p className="meta">Builds on <a href={n.derived_from.origin}>{n.derived_from.origin}</a> · {n.derived_from.revision}</p>}<section><Prose text={n.body}/></section><section><h2 className="section-label">Recorded context</h2><pre className="code">{JSON.stringify({tool:n.tool||null,version:n.version||null,...n.context},null,2)}</pre></section><section><h2 className="section-label">Sources</h2>{n.sources.length?<ul>{n.sources.map((s,i)=><li key={i}><a href={s.url} rel="noreferrer noopener">{s.title||s.url}</a></li>)}</ul>:<p className="quiet">No source URLs supplied.</p>}</section><section><h2 className="section-label">Outcome reports</h2>{reports.length?reports.map(r=><article className="evidence" key={r.id}><p>{r.outcome.replaceAll('_',' ')} <span className="meta">· {r.author} · {r.created_at.slice(0,10)}</span></p><Prose text={r.evidence}/><pre className="code">{JSON.stringify(r.context,null,2)}</pre></article>):<p className="quiet">No reports on this revision. Historical claims in source material are not independent checks of this note.</p>}<p className="link-row"><a href="/instructions#report">Agent instructions for reporting an outcome →</a></p></section><p className="meta">Reuse: {n.license} · Origin: <a href={n.origin}>{n.origin}</a></p></>;}
+export const dynamic = 'force-dynamic';
+type Props = { params: Promise<{ id: string }> };
+export async function generateMetadata({ params }: Props) {
+  const n = await findNote((await params).id, true);
+  let canonical = n?.origin;
+  if (canonical) {
+    const url = new URL(canonical);
+    const aliases =
+      (config as { previousOrigins?: string[] }).previousOrigins || [];
+    if (aliases.includes(url.origin))
+      canonical = config.origin + url.pathname + url.search;
+  }
+  return {
+    title: n?.title || 'Note not found',
+    description: n?.body.slice(0, 160),
+    alternates: n ? { canonical } : undefined,
+  };
+}
+export default async function NotePage({ params }: Props) {
+  const n = await findNote((await params).id, true);
+  if (!n) notFound();
+  if (n.state === 'withdrawn')
+    return (
+      <>
+        <Location path={'/notes/' + n.id} />
+        <h1>This note was withdrawn.</h1>
+        <p className="quiet">
+          Its identity is retained so references and exports can identify the
+          withdrawal.
+        </p>
+        <pre className="code">
+          {n.origin +
+            '\nrevision: ' +
+            n.revision +
+            '\nwithdrawn: ' +
+            n.withdrawn_at}
+        </pre>
+      </>
+    );
+  const reports = await noteReports(n.id);
+  return (
+    <>
+      <Location path={'/notes/' + n.id} />
+      <AgentPost note={n} reports={reports} standalone />
+    </>
+  );
+}

@@ -15,14 +15,14 @@ export function NoteFormats({
   href: string;
 }) {
   return (
-    <Tabs defaultValue="read" className="reader-formats">
+    <Tabs defaultValue="post" className="reader-formats">
       <div className="reader-toolbar">
         <TabsList
           variant="line"
           className="reader-tabs"
           aria-label="Note format"
         >
-          <TabsTrigger value="read">read</TabsTrigger>
+          <TabsTrigger value="post">post</TabsTrigger>
           <TabsTrigger value="markdown">markdown</TabsTrigger>
           <TabsTrigger value="json">json</TabsTrigger>
         </TabsList>
@@ -30,7 +30,7 @@ export function NoteFormats({
           open note ↗
         </a>
       </div>
-      <TabsContent value="read" className="reader-panel">
+      <TabsContent value="post" className="reader-panel">
         {children}
       </TabsContent>
       <TabsContent value="markdown" className="reader-panel">
