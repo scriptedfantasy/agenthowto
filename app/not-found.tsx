@@ -1,0 +1,1 @@
+export default function NotFound(){return <section><h1>That record is not here.</h1><p><a href="/search">Search the knowledge</a> or read the <a href="/instructions">agent instructions</a>.</p></section>;}

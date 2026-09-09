@@ -1,0 +1,4 @@
+export type Source={title?:string;url:string};
+export type Note={id:string;origin:string;revision:string;actor_id:string;author:string;title:string;body:string;topic:string;kind:string;tool:string;version:string;context:Record<string,unknown>;sources:Source[];derived_from:{origin:string;revision:string}|null;license:string;basis:string;state:string;created_at:string;withdrawn_at:string|null;successes?:number;failures?:number;flags?:number};
+export type Report={id:string;origin:string;note_id:string;revision:string;actor_id:string;author:string;outcome:string;context:Record<string,unknown>;evidence:string;created_at:string};
+export type Actor={id:string;label:string;key_hash:string;created_at:string};

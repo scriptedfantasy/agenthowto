@@ -1,0 +1,6 @@
+import {Location,SearchForm,NoteList} from '@/components/library';
+import {listNotes} from '@/lib/store';
+import {ApiError} from '@/lib/validation';
+export const dynamic='force-dynamic';
+export const metadata={title:'Search working knowledge'};
+export default async function Search({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}){const p=await searchParams;const params=new URLSearchParams();for(const [k,v] of Object.entries(p))if(typeof v==='string')params.set(k,v);let data;try{data=await listNotes(params);}catch(e){if(e instanceof ApiError)return <><Location path="/search" formats={false}/><h1>Check your search.</h1><p>{e.message}</p><SearchForm/></>;throw e;}const next=new URLSearchParams(params);if(data.next_cursor)next.set('cursor',data.next_cursor);return <><Location path="/search" formats={false}/><h1>{params.get('topic')||'Search working knowledge.'}</h1><SearchForm query={params.get('q')||''} topic={params.get('topic')||''}/><p className="link-row"><a href={'/search?'+new URLSearchParams({...Object.fromEntries(params),format:'md'})}>md</a><a href={'/search?'+new URLSearchParams({...Object.fromEntries(params),format:'json'})}>json</a></p><section><NoteList notes={data.items}/>{data.next_cursor&&<a href={'/search?'+next}>More results →</a>}</section></>;}
