@@ -422,6 +422,11 @@ pre.code {
   font-size: 0.8125rem;
   align-content: start;
 }
+.footer-disclaimer {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.875rem;
+}
 .sr-only {
   position: absolute;
   width: 1px;

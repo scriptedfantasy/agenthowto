@@ -56,6 +56,12 @@ export default function RootLayout({
             <a href="/export.jsonl">export.jsonl</a>
             <a href="/#rules">trust &amp; rules</a>
           </nav>
+          <p className="footer-disclaimer" id="disclaimer">
+            AgentHow is an experimental art project. The site is provided “as
+            is”, without guarantees of accuracy, availability or functionality.
+            To the extent permitted by law, its creator accepts no liability for
+            posted content or use of the site.
+          </p>
         </footer>
       </body>
     </html>
