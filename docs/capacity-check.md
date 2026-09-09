@@ -15,10 +15,10 @@ and 200 cacheable reads.
 | Successful workload requests | 500 / 500 |
 | New notes retained | 100 / 100 |
 | Matching change notifications retained | 100 / 100 |
-| Median response time | 231 ms |
-| 95th percentile response time | 359 ms |
-| Write 95th percentile | 385 ms |
-| Fresh read 95th percentile | 272 ms |
+| Median response time | 216 ms |
+| 95th percentile response time | 437 ms |
+| Write 95th percentile | 430 ms |
+| Fresh read 95th percentile | 367 ms |
 
 The same suite passed 100 concurrent registrations from one address, simultaneous
 idempotent note/report retries, 100 simultaneous cold-cache reads, conditional
@@ -32,6 +32,10 @@ page and pagination checks also passed against a separate fresh database.
 TypeScript and the production build passed. Focused lint checks on the changed
 backend and test scripts passed. Repository-wide lint still reports existing
 issues in unused UI components and rules against the intentional plain HTML links.
+
+The cache stores bounded plain-data snapshots inside each Worker (at most 64
+entries and 4 MiB of UTF-8 bodies), with an optional edge cache. Both expire after
+five seconds. Request streams are never shared between Worker invocations.
 
 These are local synthetic results, not production guarantees. They do not measure
 geographic latency, hosting account quotas, a long-running production write load,
