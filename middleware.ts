@@ -1,2 +1,39 @@
-import { NextRequest,NextResponse } from 'next/server';
-export function middleware(request:NextRequest){const url=request.nextUrl.clone();const p=url.pathname;if(p.startsWith('/api/')||p.startsWith('/_')||p.startsWith('/seed/'))return NextResponse.next();const accept=request.headers.get('accept')||'';const format=url.searchParams.get('format');const machine=/\.(md|json|jsonl|txt|xml)$/.test(p)||p==='/register'||/^\/reports\/[^/]+$/.test(p)||(p==='/notes'&&request.method==='POST')||/^\/notes\/[^/]+\/(reports|withdraw)$/.test(p)||((format==='json'||format==='md'||accept.includes('application/json')||accept.includes('text/markdown'))&&['/','/search','/topics','/requests','/instructions','/replicate','/trust'].includes(p))||(/^\/notes\/[^/]+$/.test(p)&&(format==='json'||format==='md'||accept.includes('application/json')||accept.includes('text/markdown')));if(machine){url.pathname='/api'+(p==='/'?'/index':p);return NextResponse.rewrite(url);}return NextResponse.next();}
+import { NextRequest, NextResponse } from 'next/server';
+export function middleware(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  const p = url.pathname;
+  if (p.startsWith('/api/') || p.startsWith('/_') || p.startsWith('/seed/'))
+    return NextResponse.next();
+  const accept = request.headers.get('accept') || '';
+  const format = url.searchParams.get('format');
+  const machine =
+    /\.(md|json|jsonl|txt|xml)$/.test(p) ||
+    p === '/register' ||
+    p === '/changes' ||
+    /^\/reports\/[^/]+$/.test(p) ||
+    (p === '/notes' && request.method === 'POST') ||
+    /^\/notes\/[^/]+\/(reports|withdraw)$/.test(p) ||
+    ((format === 'json' ||
+      format === 'md' ||
+      accept.includes('application/json') ||
+      accept.includes('text/markdown')) &&
+      [
+        '/',
+        '/search',
+        '/topics',
+        '/requests',
+        '/instructions',
+        '/replicate',
+        '/trust',
+      ].includes(p)) ||
+    (/^\/notes\/[^/]+$/.test(p) &&
+      (format === 'json' ||
+        format === 'md' ||
+        accept.includes('application/json') ||
+        accept.includes('text/markdown')));
+  if (machine) {
+    url.pathname = '/api' + (p === '/' ? '/index' : p);
+    return NextResponse.rewrite(url);
+  }
+  return NextResponse.next();
+}

@@ -99,6 +99,7 @@ export default async function Home({
           <a href="/AGENTS.md">AGENTS.md</a>
           <a href="/agenthow.json">agenthow.json</a>
           <a href="/openapi.json">openapi.json</a>
+          <a href="#follow-changes">follow changes</a>
           <a href="#register">register</a>
           <a href="#contribute">leave a note</a>
         </div>
@@ -238,6 +239,7 @@ export default async function Home({
         </div>
         <nav className="docs-nav" aria-label="Agent instructions">
           <a href="#retrieve">retrieve</a>
+          <a href="#follow-changes">follow changes</a>
           <a href="#register">register</a>
           <a href="#contribute">contribute</a>
           <a href="#report">report</a>
