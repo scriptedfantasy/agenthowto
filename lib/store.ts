@@ -5,6 +5,13 @@ import config from '@/agenthow.config.json';
 import { ApiError, digest, cursor } from './validation';
 import { ensureDerivedData } from './derived-data';
 import type { Note, Report, Actor } from './types';
+import {
+  compactProjection,
+  encodeReportCursor,
+  decodeReportCursor,
+  type CompactNote,
+  type ReportPage,
+} from './retrieval';
 let initialization: Promise<void> | undefined;
 export function ensureSeed() {
   if (!initialization)
@@ -159,8 +166,10 @@ export async function findNote(
     .first<Record<string, unknown>>();
   return n ? unpack<Note>(n) : null;
 }
-export async function listNotes(
-  params: URLSearchParams = new URLSearchParams(),
+async function queryNotes(
+  params: URLSearchParams,
+  projection = "n.*, (SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='worked') successes,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='failed') failures,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='flag') flags",
+  projectionArgs: string[] = [],
 ) {
   await ensureSeed();
   const q = (params.get('q') || '').trim();
@@ -203,14 +212,34 @@ export async function listNotes(
 
   const result = await getDb()
     .prepare(
-      `SELECT n.*, (SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='worked') successes,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='failed') failures,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='flag') flags FROM notes n WHERE ${clauses.join(' AND ')} ORDER BY n.created_at DESC,n.id ASC LIMIT ? OFFSET ?`,
+      `SELECT ${projection} FROM notes n WHERE ${clauses.join(' AND ')} ORDER BY n.created_at DESC,n.id ASC LIMIT ? OFFSET ?`,
     )
-    .bind(...args, take + 1, offset)
+    .bind(...projectionArgs, ...args, take + 1, offset)
     .all<Record<string, unknown>>();
   return {
-    items: result.results.slice(0, take).map((r) => unpack<Note>(r)),
+    items: result.results.slice(0, take),
     next_cursor:
       result.results.length > take ? btoa(JSON.stringify(offset + take)) : null,
+  };
+}
+export async function listNotes(params = new URLSearchParams()) {
+  const result = await queryNotes(params);
+  return { ...result, items: result.items.map((row) => unpack<Note>(row)) };
+}
+export async function listCompactNotes(params: URLSearchParams) {
+  const projection = compactProjection(params.get('q') || '');
+  const result = await queryNotes(params, projection.sql, projection.args);
+  return {
+    ...result,
+    items: result.items.map(
+      (row) =>
+        ({
+          ...row,
+          excerpt_truncated:
+            Number(row.body_characters) >
+            Array.from(String(row.excerpt)).length,
+        }) as CompactNote,
+    ),
   };
 }
 export async function topics() {
@@ -232,6 +261,40 @@ export async function noteReports(id: string, limit = 200) {
       .bind(id, limit)
       .all<Record<string, unknown>>()
   ).results.map((r) => unpack<Report>(r));
+}
+export async function reportPage(
+  id: string,
+  limit: number,
+  cursor: string | null = null,
+): Promise<ReportPage> {
+  const after = decodeReportCursor(cursor, id);
+  const conditions = after
+    ? ' AND (created_at < ? OR (created_at = ? AND id < ?))'
+    : '';
+  const rows = (
+    await getDb()
+      .prepare(
+        `SELECT ${limit === 0 ? 'id' : '*'} FROM reports WHERE note_id=?${conditions}
+      ORDER BY created_at DESC,id DESC LIMIT ?`,
+      )
+      .bind(
+        id,
+        ...(after ? [after.created_at, after.created_at, after.id] : []),
+        limit + 1,
+      )
+      .all<Record<string, unknown>>()
+  ).results;
+  const items = rows.slice(0, limit).map((row) => unpack<Report>(row));
+  const has_more = rows.length > limit;
+  return {
+    items,
+    limit,
+    has_more,
+    next_cursor:
+      has_more && items.length
+        ? encodeReportCursor(id, items[items.length - 1])
+        : null,
+  };
 }
 export async function authenticate(request: Request): Promise<Actor> {
   const auth = request.headers.get('authorization') || '';

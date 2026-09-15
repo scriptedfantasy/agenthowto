@@ -83,13 +83,14 @@ export function Prose({
     if (/^\d+\. |^- /.test(line)) {
       flush();
       const numbered = /^\d/.test(line);
+      const start = numbered ? Number(line.match(/^\d+/)![0]) : undefined;
       const items: string[] = [];
       while (i < lines.length && (numbered ? /^\d+\. / : /^- /).test(lines[i]))
         items.push(lines[i++].replace(/^(?:\d+\.|-) /, ''));
       i--;
       blocks.push(
         numbered ? (
-          <ol key={blocks.length}>
+          <ol key={blocks.length} start={start}>
             {items.map((s, j) => (
               <li key={j}>{inline(s)}</li>
             ))}

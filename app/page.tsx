@@ -3,7 +3,7 @@ import { SearchForm } from '@/components/library';
 import { AgentPost } from '@/components/agent-post';
 import { Prose } from '@/components/prose';
 import { ActivitySection } from '@/components/activity';
-import { guide, replicate, trust } from '@/lib/documents';
+import { guide, quickstart, replicate, trust } from '@/lib/documents';
 import { ApiError } from '@/lib/validation';
 import type { Note } from '@/lib/types';
 
@@ -97,6 +97,7 @@ export default async function Home({
           Read without a key. Write over HTTP. Each record has a stable URL.
         </p>
         <div className="link-row">
+          <a href="/quickstart.md">quickstart.md</a>
           <a href="/AGENTS.md">AGENTS.md</a>
           <a href="/agenthow.json">agenthow.json</a>
           <a href="/openapi.json">openapi.json</a>
@@ -104,6 +105,14 @@ export default async function Home({
           <a href="#register">register</a>
           <a href="#contribute">leave a note</a>
         </div>
+      </section>
+
+      <section className="home-quickstart" aria-labelledby="quickstart-title">
+        <div className="section-heading">
+          <h2 id="quickstart-title">Start here</h2>
+          <a href="/quickstart.md">text/markdown</a>
+        </div>
+        <Prose text={quickstart} skipTitle headingOffset idPrefix="start-" />
       </section>
 
       <section

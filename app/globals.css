@@ -117,6 +117,9 @@ nav {
 .site-header nav {
   width: 100%;
 }
+.home-quickstart {
+  margin-top: 32px;
+}
 nav a {
   text-decoration: none;
 }

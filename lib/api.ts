@@ -18,7 +18,8 @@ import {
   ensureSeed,
   findNote,
   listNotes,
-  noteReports,
+  listCompactNotes,
+  reportPage,
   topics,
   exportRecords,
 } from './store';
@@ -29,6 +30,16 @@ import { changesSince } from './changes';
 import { cachedRead } from './read-cache';
 import { activity } from './activity';
 import { actorProfile } from './actor-profile';
+import {
+  searchView,
+  compactMarkdown,
+  readLimit,
+  nextPageUrl,
+  paginationHeaders,
+  reportPageInfo,
+  reportMarkdown,
+  reportPageMarkdown,
+} from './retrieval';
 const headers = {
   'X-Content-Type-Options': 'nosniff',
   'Cache-Control': 'no-store',
@@ -539,10 +550,21 @@ async function handleUncachedApi(request: Request, path: string) {
           },
           410,
         );
-      const reports = await noteReports(n.id);
+      const page = await reportPage(n.id, readLimit(params, 'reports_limit'));
+      const info = reportPageInfo(n.id, page, format);
+      const extra = paginationHeaders(info.next_url);
       return format === 'md'
-        ? text(noteMarkdown(n, reports))
-        : json({ ...n, url: config.origin + '/notes/' + n.id, reports });
+        ? text(noteMarkdown(n, page.items, info), undefined, extra)
+        : json(
+            {
+              ...n,
+              url: config.origin + '/notes/' + n.id,
+              reports: page.items,
+              reports_page: info,
+            },
+            200,
+            extra,
+          );
     }
     const singleReport = bare.match(/^reports\/([^/]+)$/);
     if (singleReport) {
@@ -555,15 +577,70 @@ async function handleUncachedApi(request: Request, path: string) {
       if (!r) throw new ApiError(404, 'not_found', 'Report not found');
       return json({ ...r, context: JSON.parse(r.context as string) });
     }
-    const rr = path.match(/^notes\/([^/]+)\/reports$/);
+    const rr = bare.match(/^notes\/([^/]+)\/reports$/);
     if (rr) {
       if (!(await findNote(rr[1])))
         throw new ApiError(404, 'not_found', 'Note not found');
-      return json({ items: await noteReports(rr[1]) });
+      const page = await reportPage(
+        rr[1],
+        readLimit(params, 'limit', 1),
+        params.get('cursor'),
+      );
+      const info = reportPageInfo(rr[1], page, format);
+      const extra = paginationHeaders(info.next_url);
+      return format === 'md'
+        ? text(
+            '# Outcome reports\n\n' +
+              reportPageMarkdown(info) +
+              '\n\n' +
+              (page.items.length
+                ? page.items.map(reportMarkdown).join('\n\n')
+                : 'No outcome reports in this page.'),
+            undefined,
+            extra,
+          )
+        : json({ items: page.items, ...info }, 200, extra);
     }
     if (['search', 'notes', 'requests', 'index'].includes(bare)) {
       if (bare === 'requests') params.set('kind', 'request');
+      const view = searchView(params);
+      if (view === 'compact') {
+        const result = await listCompactNotes(params);
+        const items = result.items.map((note) => {
+          const url = config.origin + '/notes/' + encodeURIComponent(note.id);
+          return {
+            ...note,
+            url,
+            fetch_url:
+              url + (format === 'md' ? '.md' : '.json') + '?reports_limit=0',
+          };
+        });
+        const next_url = nextPageUrl(bare, params, result.next_cursor, format);
+        const extra = paginationHeaders(next_url);
+        return format === 'md'
+          ? text(
+              '# AgentHow compact search\n\nExcerpts are verbatim submitted text. Fetch the full record for context.\n\n' +
+                items.map(compactMarkdown).join('\n\n') +
+                `\n\nhas_more: ${!!result.next_cursor}\nnext_cursor: ${result.next_cursor || 'none'}\nnext_url: ${next_url || 'none'}`,
+              undefined,
+              extra,
+            )
+          : json(
+              {
+                items,
+                view,
+                node: config.origin,
+                next_cursor: result.next_cursor,
+                has_more: !!result.next_cursor,
+                next_url,
+              },
+              200,
+              extra,
+            );
+      }
       const result = await listNotes(params);
+      const next_url = nextPageUrl(bare, params, result.next_cursor, format);
+      const extra = paginationHeaders(next_url);
       return format === 'md'
         ? text(
             '# AgentHow\n\n' +
@@ -574,16 +651,25 @@ async function handleUncachedApi(request: Request, path: string) {
                 )
                 .join('\n\n') +
               '\n\nnext_cursor: ' +
-              (result.next_cursor || 'none'),
+              (result.next_cursor || 'none') +
+              '\nnext_url: ' +
+              (next_url || 'none'),
+            undefined,
+            extra,
           )
-        : json({
-            ...result,
-            items: result.items.map((n) => ({
-              ...n,
-              url: config.origin + '/notes/' + n.id,
-            })),
-            node: config.origin,
-          });
+        : json(
+            {
+              ...result,
+              items: result.items.map((n) => ({
+                ...n,
+                url: config.origin + '/notes/' + n.id,
+              })),
+              node: config.origin,
+              next_url,
+            },
+            200,
+            extra,
+          );
     }
     if (bare === 'topics') {
       const items = await topics();
