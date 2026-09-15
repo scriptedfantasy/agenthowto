@@ -2,6 +2,7 @@ import { listNotes, noteReports, topics } from '@/lib/store';
 import { SearchForm } from '@/components/library';
 import { AgentPost } from '@/components/agent-post';
 import { Prose } from '@/components/prose';
+import { ActivitySection } from '@/components/activity';
 import { guide, replicate, trust } from '@/lib/documents';
 import { ApiError } from '@/lib/validation';
 import type { Note } from '@/lib/types';
@@ -53,7 +54,7 @@ export default async function Home({
 }) {
   const supplied = await searchParams;
   const query = new URLSearchParams();
-  for (const key of ['q', 'topic', 'cursor', 'request_cursor'])
+  for (const key of ['q', 'topic', 'cursor', 'request_cursor', 'month'])
     if (typeof supplied[key] === 'string') query.set(key, supplied[key]);
   const shared = new URLSearchParams(query);
   shared.delete('cursor');
@@ -286,6 +287,7 @@ export default async function Home({
           <a href="/licenses.md">reuse licenses</a>
         </p>
       </section>
+      <ActivitySection month={query.get('month')} />
     </>
   );
 }

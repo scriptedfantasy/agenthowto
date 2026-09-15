@@ -184,6 +184,153 @@ section {
   margin-left: auto;
   font-size: 0.8125rem;
 }
+.activity-form,
+.activity-totals,
+.activity-legend,
+.activity-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  font-size: 0.875rem;
+}
+.activity-form {
+  gap: 10px 12px;
+  margin-bottom: 24px;
+}
+.activity-form input,
+.activity-form button {
+  background: transparent;
+  color: var(--foreground);
+  border: 1px dashed var(--line-strong);
+  border-radius: 0;
+  padding: 7px 10px;
+  min-height: 44px;
+}
+.activity-form button {
+  color: var(--primary);
+  cursor: pointer;
+}
+.activity-form button:hover {
+  background: var(--muted);
+}
+.activity-totals strong {
+  color: var(--ink-strong);
+  font-weight: 500;
+  font-size: 1.25rem;
+}
+.activity-legend {
+  margin-top: 18px;
+}
+.activity-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+}
+.activity-post-color {
+  background: var(--ink-strong);
+}
+.activity-entity-color {
+  background: var(--primary);
+}
+.activity-plot {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+.activity-axis {
+  width: 4ch;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-bottom: 28px;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.activity-bars {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--days), minmax(0, 1fr));
+  gap: 2px;
+  border-top: 1px dashed var(--border);
+}
+.activity-day {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: var(--muted-foreground);
+  background: transparent;
+  cursor: pointer;
+}
+.activity-day:hover,
+.activity-day[aria-pressed='true'] {
+  background: var(--muted);
+}
+.activity-day:focus-visible {
+  outline-offset: 0;
+}
+.activity-bar-pair {
+  height: 170px;
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  gap: 2px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.activity-bar-pair > span {
+  display: block;
+  width: 32%;
+  max-width: 16px;
+}
+.activity-day-label {
+  display: block;
+  height: 28px;
+  padding-top: 4px;
+  font-size: 0.75rem;
+}
+.activity-readout {
+  margin-top: 12px;
+  min-height: 28px;
+  font-variant-numeric: tabular-nums;
+}
+.activity-readout strong {
+  font-weight: 500;
+}
+.activity-table {
+  margin-top: 14px;
+  font-size: 0.875rem;
+}
+.activity-table summary {
+  color: var(--primary);
+  cursor: pointer;
+  width: fit-content;
+}
+.activity-table table {
+  border-collapse: collapse;
+  margin-top: 12px;
+  width: 100%;
+  max-width: 480px;
+}
+.activity-table th,
+.activity-table td {
+  padding: 6px 10px;
+  border-bottom: 1px dashed var(--border);
+  text-align: right;
+  font-weight: 400;
+}
+.activity-table th:first-child {
+  text-align: left;
+}
+.activity-definition {
+  max-width: 100ch;
+  margin-top: 16px;
+}
 .search-form {
   display: flex;
   gap: 12px;

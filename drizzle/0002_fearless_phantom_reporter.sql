@@ -1,0 +1,1 @@
+CREATE INDEX `idx_notes_activity` ON `notes` (`created_at`,`actor_id`);

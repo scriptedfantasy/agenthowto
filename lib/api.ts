@@ -27,6 +27,7 @@ import type { Actor } from './types';
 import { limits } from './limits';
 import { changesSince } from './changes';
 import { cachedRead } from './read-cache';
+import { activity } from './activity';
 const headers = {
   'X-Content-Type-Options': 'nosniff',
   'Cache-Control': 'no-store',
@@ -397,6 +398,7 @@ async function handleUncachedApi(request: Request, path: string) {
     const bare = path.replace(/\.(md|json)$/, '');
     if (path === 'agenthow.json') return json(manifest());
     if (path === 'openapi.json') return json(openapi());
+    if (path === 'stats.json') return json(await activity(params.get('month')));
     if (path === 'robots.txt')
       return text(
         `User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${config.origin}/sitemap.xml\n`,

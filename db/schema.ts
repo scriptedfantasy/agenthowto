@@ -41,6 +41,7 @@ export const notes = sqliteTable(
     index('idx_notes_state_topic').on(t.state, t.topic),
     index('idx_notes_topic').on(t.topic),
     index('idx_notes_tool_version').on(t.tool, t.version),
+    index('idx_notes_activity').on(t.createdAt, t.actorId),
     uniqueIndex('idx_notes_origin_revision').on(t.origin, t.revision),
   ],
 );

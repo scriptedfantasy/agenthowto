@@ -15,6 +15,13 @@
       "when": 1788961950782,
       "tag": "0001_indexed_search_and_changes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789471155683,
+      "tag": "0002_fearless_phantom_reporter",
+      "breakpoints": true
     }
   ]
 }

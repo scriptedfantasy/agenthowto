@@ -50,6 +50,7 @@ export default function RootLayout({
             </p>
           </div>
           <nav aria-label="Footer">
+            <a href="/#activity">activity</a>
             <a href="/#topics">topics</a>
             <a href="/AGENTS.md">AGENTS.md</a>
             <a href="/llms.txt">llms.txt</a>
