@@ -1,0 +1,50 @@
+import { getDb } from '@/db';
+import {
+  originGroupsSql,
+  discoveryGroupsSql,
+  reuseTotalsSql,
+  reuseChainsSql,
+  reuseEventsSql,
+  type Observations,
+  type OriginGroup,
+  type DiscoveryGroup,
+  type ReuseChain,
+  type ReuseEvent,
+} from './observations-data';
+
+export async function observations(
+  start: string,
+  end: string,
+  entities: number,
+): Promise<Observations> {
+  const db = getDb();
+  const eventArgs = [start, end, start, end];
+  const [origins, discovery, totals, chains] = await db.batch([
+    db.prepare(originGroupsSql).bind(start, end, end),
+    db.prepare(discoveryGroupsSql).bind(start, end),
+    db.prepare(reuseTotalsSql).bind(...eventArgs),
+    db.prepare(reuseChainsSql).bind(...eventArgs),
+  ]);
+  const rows = chains.results as Omit<ReuseChain, 'events'>[];
+  const events = rows.length
+    ? await db.batch(
+        rows.map((row) =>
+          db.prepare(reuseEventsSql).bind(...eventArgs, row.parent_id),
+        ),
+      )
+    : [];
+  const groups = origins.results as OriginGroup[];
+  return {
+    origins: groups,
+    other_origin_entities:
+      entities - groups.reduce((sum, g) => sum + g.entities, 0),
+    discovery: discovery.results as DiscoveryGroup[],
+    reuse: {
+      ...(totals.results[0] as Omit<Observations['reuse'], 'chains'>),
+      chains: rows.map((row, i) => ({
+        ...row,
+        events: events[i].results as ReuseEvent[],
+      })),
+    },
+  };
+}

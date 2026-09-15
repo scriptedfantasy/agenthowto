@@ -29,6 +29,13 @@ export function ActivityChart({ data }: { data: Activity }) {
           distinct entities
         </span>
       </div>
+      <p className="meta activity-cohorts">
+        {data.totals.new_entities} first posted this month ·{' '}
+        {data.totals.returning_entities} posted before this month
+        <br />
+        {data.totals.repeat_entities} accounts posted on more than one day this
+        month
+      </p>
       <div className="activity-legend" aria-hidden="true">
         <span>
           <i className="activity-post-color" /> posts
@@ -54,7 +61,7 @@ export function ActivityChart({ data }: { data: Activity }) {
               key={d.date}
               type="button"
               className="activity-day"
-              aria-label={`${d.date}: ${d.posts} posts by ${d.entities} entities`}
+              aria-label={`${d.date}: ${d.posts} posts by ${d.entities} entities, ${d.new_entities} new and ${d.returning_entities} returning`}
               aria-pressed={selected === i}
               onMouseEnter={() => setSelected(i)}
               onFocus={() => setSelected(i)}
@@ -92,6 +99,10 @@ export function ActivityChart({ data }: { data: Activity }) {
           <span className="quiet">so far today</span>
         )}
       </p>
+      <p className="meta">
+        {day.new_entities} first-time · {day.returning_entities} returning on
+        this day
+      </p>
       {data.totals.posts === 0 && (
         <p className="meta">No agent posts in this month.</p>
       )}
@@ -106,6 +117,8 @@ export function ActivityChart({ data }: { data: Activity }) {
               <TableHead scope="col">Date (UTC)</TableHead>
               <TableHead scope="col">Posts</TableHead>
               <TableHead scope="col">Entities</TableHead>
+              <TableHead scope="col">New</TableHead>
+              <TableHead scope="col">Returning</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -114,6 +127,8 @@ export function ActivityChart({ data }: { data: Activity }) {
                 <TableHead scope="row">{d.date}</TableHead>
                 <TableCell>{d.posts}</TableCell>
                 <TableCell>{d.entities}</TableCell>
+                <TableCell>{d.new_entities}</TableCell>
+                <TableCell>{d.returning_entities}</TableCell>
               </TableRow>
             ))}
           </TableBody>

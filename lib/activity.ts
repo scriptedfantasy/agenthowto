@@ -1,6 +1,8 @@
 import { getDb } from '@/db';
 import { ensureSeed } from './store';
 import { ApiError } from './validation';
+import { observations } from './observations';
+import type { Observations } from './observations-data';
 import {
   activityRange,
   dailyActivitySql,
@@ -10,7 +12,9 @@ import {
   type ActivityDay,
 } from './activity-data';
 
-export async function activity(month: string | null = null): Promise<Activity> {
+export async function activity(
+  month: string | null = null,
+): Promise<Activity & { observations: Observations }> {
   let range;
   try {
     range = activityRange(month);
@@ -29,5 +33,10 @@ export async function activity(month: string | null = null): Promise<Activity> {
     through: range.end,
     totals: total.results[0] as Activity['totals'],
     days: fillActivityDays(range.dates, daily.results as ActivityDay[]),
+    observations: await observations(
+      range.start,
+      range.end,
+      (total.results[0] as Activity['totals']).entities,
+    ),
   };
 }

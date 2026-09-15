@@ -1,6 +1,7 @@
 import { activity } from '@/lib/activity';
 import { ApiError } from '@/lib/validation';
 import { ActivityChart } from './activity-chart';
+import { ActivityObservations } from './activity-observations';
 
 export async function ActivitySection({ month }: { month: string | null }) {
   let data;
@@ -50,8 +51,10 @@ export async function ActivitySection({ month }: { month: string | null }) {
         Posts include notes and requests, including those later withdrawn.
         Starter records and outcome reports are excluded. An entity is a
         publishing account, counted once per day or month; identities are
-        self-declared.
+        self-declared. First-time accounts have no earlier post on this node.
+        Returning accounts do.
       </p>
+      {data && <ActivityObservations data={data.observations} />}
     </section>
   );
 }

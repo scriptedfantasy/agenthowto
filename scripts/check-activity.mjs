@@ -41,9 +41,17 @@ const db = new DatabaseSync(':memory:');
 db.exec(
   'CREATE TABLE notes (id TEXT PRIMARY KEY, actor_id TEXT, author TEXT, created_at TEXT, kind TEXT, state TEXT)',
 );
+db.exec('CREATE TABLE actors (id TEXT PRIMARY KEY)');
+db.exec('CREATE TABLE reports (created_at TEXT, note_id TEXT)');
 db.exec(
   readFileSync(
     new URL('../drizzle/0002_fearless_phantom_reporter.sql', import.meta.url),
+    'utf8',
+  ),
+);
+db.exec(
+  readFileSync(
+    new URL('../drizzle/0003_silky_the_executioner.sql', import.meta.url),
     'utf8',
   ),
 );
@@ -76,16 +84,55 @@ for (const row of [
   insert.run(...row);
 const rows = db.prepare(dailyActivitySql).all(current.start, current.end);
 const days = fillActivityDays(current.dates, rows);
-assert.deepEqual({ ...days[0] }, { date: '2026-09-01', posts: 2, entities: 1 });
-assert.deepEqual({ ...days[1] }, { date: '2026-09-02', posts: 2, entities: 2 });
-assert.deepEqual({ ...days[8] }, { date: '2026-09-09', posts: 0, entities: 0 });
+assert.deepEqual(
+  { ...days[0] },
+  {
+    date: '2026-09-01',
+    posts: 2,
+    entities: 1,
+    new_entities: 0,
+    returning_entities: 1,
+  },
+);
+assert.deepEqual(
+  { ...days[1] },
+  {
+    date: '2026-09-02',
+    posts: 2,
+    entities: 2,
+    new_entities: 1,
+    returning_entities: 1,
+  },
+);
+assert.deepEqual(
+  { ...days[8] },
+  {
+    date: '2026-09-09',
+    posts: 0,
+    entities: 0,
+    new_entities: 0,
+    returning_entities: 0,
+  },
+);
 assert.deepEqual(
   { ...days[14] },
-  { date: '2026-09-15', posts: 1, entities: 1 },
+  {
+    date: '2026-09-15',
+    posts: 1,
+    entities: 1,
+    new_entities: 1,
+    returning_entities: 0,
+  },
 );
 assert.deepEqual(
   { ...db.prepare(activityTotalsSql).get(current.start, current.end) },
-  { posts: 5, entities: 3 },
+  {
+    posts: 5,
+    entities: 3,
+    new_entities: 2,
+    returning_entities: 1,
+    repeat_entities: 1,
+  },
 );
 assert.equal(
   days.reduce((n, d) => n + d.posts, 0),
@@ -99,7 +146,13 @@ const empty = activityRange('2026-07', now);
 assert.equal(fillActivityDays(empty.dates, []).length, 31);
 assert.deepEqual(
   { ...db.prepare(activityTotalsSql).get(empty.start, empty.end) },
-  { posts: 0, entities: 0 },
+  {
+    posts: 0,
+    entities: 0,
+    new_entities: 0,
+    returning_entities: 0,
+    repeat_entities: 0,
+  },
 );
 for (const sql of [dailyActivitySql, activityTotalsSql]) {
   const plan = db

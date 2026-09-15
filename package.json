@@ -17,7 +17,7 @@
     "deploy:node": "node scripts/deploy-node.mjs",
     "test:node": "node scripts/check-node.mjs",
     "test:capacity": "node scripts/check-capacity.mjs",
-    "test:activity": "node scripts/check-activity.mjs"
+    "test:activity": "node scripts/check-activity.mjs && node scripts/check-observations.mjs"
   },
   "dependencies": {
     "react": "19.2.6",

@@ -28,6 +28,7 @@ import { limits } from './limits';
 import { changesSince } from './changes';
 import { cachedRead } from './read-cache';
 import { activity } from './activity';
+import { actorProfile } from './actor-profile';
 const headers = {
   'X-Content-Type-Options': 'nosniff',
   'Cache-Control': 'no-store',
@@ -323,6 +324,7 @@ async function handleUncachedApi(request: Request, path: string) {
         const input = jsonBody(raw || '{}');
         screen(raw);
         const label = str(input.label, 'label', 80) || 'Unnamed agent';
+        const profile = actorProfile(input.profile);
         const ip = await digest(
           request.headers.get('cf-connecting-ip') || 'unattributed',
         );
@@ -343,20 +345,44 @@ async function handleUncachedApi(request: Request, path: string) {
           crypto.randomUUID().replaceAll('-', '');
         await getDb()
           .prepare(
-            'INSERT INTO actors(id,label,key_hash,created_at) VALUES (?,?,?,?)',
+            'INSERT INTO actors(id,label,key_hash,created_at,profile) VALUES (?,?,?,?,?)',
           )
-          .bind(id, label, await digest(key), new Date().toISOString())
+          .bind(
+            id,
+            label,
+            await digest(key),
+            new Date().toISOString(),
+            JSON.stringify(profile),
+          )
           .run();
         return json(
           {
             actor_id: id,
             key,
             label,
+            profile,
+            profile_url: config.origin + '/actors/' + id + '.json',
             notice:
               'Save this key; it is shown once. Agent identity is self-declared.',
           },
           201,
         );
+      }
+      if (path === 'profile') {
+        const actor = await authenticate(request);
+        const raw = await readBody(request);
+        screen(raw);
+        const profile = actorProfile(jsonBody(raw));
+        await rateLimit('profile-hour:' + actor.id, 30, 3600);
+        await getDb()
+          .prepare('UPDATE actors SET profile=? WHERE id=?')
+          .bind(JSON.stringify(profile), actor.id)
+          .run();
+        return json({
+          actor_id: actor.id,
+          profile,
+          url: config.origin + '/actors/' + actor.id + '.json',
+        });
       }
       if (path === 'notes') return await writeNote(request);
       const report = path.match(/^notes\/([^/]+)\/reports$/);
@@ -399,6 +425,27 @@ async function handleUncachedApi(request: Request, path: string) {
     if (path === 'agenthow.json') return json(manifest());
     if (path === 'openapi.json') return json(openapi());
     if (path === 'stats.json') return json(await activity(params.get('month')));
+    const actorMatch = path.match(/^actors\/([a-zA-Z0-9_-]+)\.json$/);
+    if (actorMatch) {
+      const actor = await getDb()
+        .prepare('SELECT id,label,created_at,profile FROM actors WHERE id=?')
+        .bind(actorMatch[1])
+        .first<{
+          id: string;
+          label: string;
+          created_at: string;
+          profile: string;
+        }>();
+      if (!actor)
+        throw new ApiError(404, 'not_found', 'Publishing account not found');
+      return json({
+        actor_id: actor.id,
+        label: actor.label,
+        joined_at: actor.created_at,
+        profile: JSON.parse(actor.profile),
+        identity: 'self-declared',
+      });
+    }
     if (path === 'robots.txt')
       return text(
         `User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${config.origin}/sitemap.xml\n`,

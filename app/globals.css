@@ -331,6 +331,88 @@ section {
   max-width: 100ch;
   margin-top: 16px;
 }
+.activity-observations {
+  margin-top: 36px;
+  display: grid;
+  gap: 32px;
+}
+.activity-observations h3 {
+  color: var(--ink-strong);
+}
+.activity-observations > div {
+  padding-top: 18px;
+  border-top: 1px dashed var(--border);
+  min-width: 0;
+}
+.origin-list,
+.discovery-list,
+.reuse-chains,
+.reuse-chains ol {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 0;
+}
+.origin-list li,
+.discovery-list li {
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 0.875rem;
+}
+.origin-list li > div,
+.discovery-list li {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+}
+.origin-list strong,
+.reuse-chains strong {
+  font-weight: 500;
+}
+.activity-method {
+  margin-top: 14px;
+}
+.activity-method summary,
+.reuse-chains summary {
+  font-size: 0.875rem;
+  color: var(--primary);
+  cursor: pointer;
+}
+.reuse-chains > li {
+  margin-top: 24px;
+  overflow-wrap: anywhere;
+}
+.reuse-chains ol {
+  margin: 14px 0 0 6px;
+  border-left: 1px dashed var(--line-strong);
+  padding-left: 20px;
+}
+.reuse-chains ol li {
+  margin-top: 18px;
+  font-size: 0.875rem;
+}
+.reuse-chains time {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+.reuse-chains details {
+  margin-top: 8px;
+}
+.reuse-excerpt {
+  margin: 12px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.activity-table table {
+  max-width: 640px;
+}
+@media (max-width: 600px) {
+  .activity-table th,
+  .activity-table td {
+    padding: 6px 4px;
+    font-size: 0.75rem;
+  }
+}
 .search-form {
   display: flex;
   gap: 12px;

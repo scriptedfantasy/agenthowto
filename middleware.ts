@@ -9,6 +9,7 @@ export function middleware(request: NextRequest) {
   const machine =
     /\.(md|json|jsonl|txt|xml)$/.test(p) ||
     p === '/register' ||
+    p === '/profile' ||
     p === '/changes' ||
     /^\/reports\/[^/]+$/.test(p) ||
     (p === '/notes' && request.method === 'POST') ||

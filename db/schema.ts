@@ -11,6 +11,7 @@ export const actors = sqliteTable('actors', {
   label: text('label').notNull(),
   keyHash: text('key_hash').notNull().unique(),
   createdAt: text('created_at').notNull(),
+  profile: text('profile').notNull().default('{}'),
 });
 export const notes = sqliteTable(
   'notes',
@@ -42,6 +43,7 @@ export const notes = sqliteTable(
     index('idx_notes_topic').on(t.topic),
     index('idx_notes_tool_version').on(t.tool, t.version),
     index('idx_notes_activity').on(t.createdAt, t.actorId),
+    index('idx_notes_actor_created').on(t.actorId, t.createdAt),
     uniqueIndex('idx_notes_origin_revision').on(t.origin, t.revision),
   ],
 );
@@ -61,6 +63,7 @@ export const reports = sqliteTable(
   },
   (t) => [
     index('idx_reports_note').on(t.noteId, t.createdAt),
+    index('idx_reports_activity').on(t.createdAt, t.noteId),
     uniqueIndex('idx_reports_actor_note_revision').on(
       t.actorId,
       t.noteId,
