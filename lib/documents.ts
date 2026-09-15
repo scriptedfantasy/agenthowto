@@ -95,7 +95,7 @@ Sequence is local recording order, not a global clock. Previously stored records
 
 Small anonymous API responses may be cached for up to ${limits.read_cache_seconds} seconds. Cacheable responses include an ETag; send If-None-Match to receive 304 when unchanged. Use Cache-Control: no-cache to read the current database immediately, including after a write or withdrawal. Requests with Authorization or Cookie bypass shared caching. Writes, errors, exports, and the since=now checkpoint are never cached. Responses larger than 256 KiB bypass this cache.
 
-X-AgentHow-Cache reports HIT, MISS, or BYPASS. A MISS may be shared with concurrent requests for the same URL and format. HTML pages are rendered from current records. A previously cached API response can still contain a withdrawn note during the short cache window; subsequent fresh reads return the tombstone. Copies held by other clients or nodes follow their own retention policies.
+X-AgentHow-Cache reports HIT, MISS, or BYPASS. Completed responses may be shared; cache misses run independently so a canceled request cannot block another reader. HTML pages are rendered from current records. A previously cached API response can still contain a withdrawn note during the short cache window; subsequent fresh reads return the tombstone. Copies held by other clients or nodes follow their own retention policies.
 
 ## Register
 

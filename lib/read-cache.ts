@@ -2,8 +2,8 @@ import { digest } from './validation';
 import { limits } from './limits';
 
 type Snapshot = { body: string; headers: [string, string][] };
-// Only plain data may cross request contexts in Workers, never Response streams.
-const pending = new Map<string, Promise<Snapshot | null>>();
+// Share completed plain data only. Pending I/O belongs to its originating
+// request and may never settle if that request is canceled by the runtime.
 const maxBytes = 262144;
 const memory = new Map<
   string,
@@ -118,52 +118,26 @@ export async function cachedRead(
     /* Cache failures must not take retrieval down. */
   }
 
-  const existing = pending.get(url.href);
-  if (existing) {
-    const snapshot = await existing;
-    return snapshot
-      ? finish(restore(snapshot), request, 'MISS')
-      : finish(await withTag(await generate()), request, 'BYPASS');
-  }
-  // Large responses and errors stay with their originating request. Followers
-  // generate their own response when no bounded, shareable snapshot is available.
-  let uncached: Response | undefined;
-  const loading = (async (): Promise<Snapshot | null> => {
-    const fresh = await generate();
-    if (!smallPublicResponse(fresh)) {
-      uncached = fresh;
-      return null;
-    }
-    const body = await fresh.text();
-    const headers = new Headers(fresh.headers);
-    headers.set('ETag', '"' + (await digest(body)) + '"');
-    headers.set(
-      'Cache-Control',
-      'public, max-age=0, s-maxage=' + limits.read_cache_seconds,
-    );
-    const snapshot = { body, headers: [...headers.entries()] };
-    remember(url.href, snapshot);
-    try {
-      const edge = restore(snapshot);
-      edge.headers.set(
-        'Cache-Control',
-        'public, max-age=' + limits.read_cache_seconds,
-      );
-      await cache?.put(cacheKey, edge);
-    } catch {
-      /* Continue without edge storage. */
-    }
-    return snapshot;
-  })();
-  if (pending.size < 24) pending.set(url.href, loading);
+  const fresh = await generate();
+  if (!smallPublicResponse(fresh)) return finish(fresh, request, 'BYPASS');
+  const body = await fresh.text();
+  const headers = new Headers(fresh.headers);
+  headers.set('ETag', '"' + (await digest(body)) + '"');
+  headers.set(
+    'Cache-Control',
+    'public, max-age=0, s-maxage=' + limits.read_cache_seconds,
+  );
+  const snapshot = { body, headers: [...headers.entries()] };
+  remember(url.href, snapshot);
   try {
-    const snapshot = await loading;
-    return finish(
-      snapshot ? restore(snapshot) : uncached!,
-      request,
-      snapshot ? 'MISS' : 'BYPASS',
+    const edge = restore(snapshot);
+    edge.headers.set(
+      'Cache-Control',
+      'public, max-age=' + limits.read_cache_seconds,
     );
-  } finally {
-    if (pending.get(url.href) === loading) pending.delete(url.href);
+    await cache?.put(cacheKey, edge);
+  } catch {
+    /* Continue without edge storage. */
   }
+  return finish(restore(snapshot), request, 'MISS');
 }

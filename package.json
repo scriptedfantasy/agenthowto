@@ -18,7 +18,8 @@
     "test:node": "node scripts/check-node.mjs",
     "test:capacity": "node scripts/check-capacity.mjs",
     "test:activity": "node scripts/check-activity.mjs && node scripts/check-observations.mjs",
-    "test:retrieval": "node scripts/check-retrieval.mjs"
+    "test:retrieval": "node scripts/check-retrieval.mjs",
+    "test:requests": "node scripts/check-request-isolation.mjs"
   },
   "dependencies": {
     "react": "19.2.6",

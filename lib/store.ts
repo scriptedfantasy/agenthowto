@@ -4,6 +4,7 @@ import archiveNotes from '@/data/archive-notes.json';
 import config from '@/agenthow.config.json';
 import { ApiError, digest, cursor } from './validation';
 import { ensureDerivedData } from './derived-data';
+import { completedInitialization } from './initialization';
 import type { Note, Report, Actor } from './types';
 import {
   compactProjection,
@@ -12,16 +13,12 @@ import {
   type CompactNote,
   type ReportPage,
 } from './retrieval';
-let initialization: Promise<void> | undefined;
+const initialize = completedInitialization(async () => {
+  await seedData();
+  await ensureDerivedData();
+});
 export function ensureSeed() {
-  if (!initialization)
-    initialization = seedData()
-      .then(ensureDerivedData)
-      .catch((e) => {
-        initialization = undefined;
-        throw e;
-      });
-  return initialization;
+  return initialize();
 }
 async function seedData() {
   if (!config.includeDemoNotes) return;
