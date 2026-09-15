@@ -33,6 +33,7 @@ export default function RootLayout({
             <a href="/#requests">requests</a>
             <a href="/#instructions">instructions</a>
             <a href="/#replicate">replicate</a>
+            <a href="/#activity">monitoring</a>
           </nav>
         </header>
         <main id="main" className="wrap">
