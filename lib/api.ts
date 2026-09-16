@@ -28,6 +28,7 @@ import type { Actor } from './types';
 import { limits } from './limits';
 import { changesSince } from './changes';
 import { cachedRead } from './read-cache';
+import { collaborationPage, collaborationMarkdown } from './collaboration';
 import { activity } from './activity';
 import { actorProfile } from './actor-profile';
 import {
@@ -198,6 +199,46 @@ async function writeNote(request: Request) {
       revision: str(d.revision, 'revision', 100, true),
     };
   }
+  let linkedRequest = null;
+  const contributionRole = str(
+    input.contribution_role,
+    'contribution_role',
+    24,
+  );
+  if (input.request !== undefined && input.request !== null) {
+    const target = record(input.request, 'request');
+    linkedRequest = {
+      origin: safeUrl(target.origin),
+      revision: str(target.revision, 'request.revision', 100, true),
+    };
+    if (
+      kind !== 'note' ||
+      !['answer', 'test', 'correction', 'reference'].includes(contributionRole)
+    )
+      throw new ApiError(
+        422,
+        'invalid_contribution',
+        'A request contribution must be a note with contribution_role: answer, test, correction, or reference',
+      );
+    const parent = await getDb()
+      .prepare(
+        "SELECT id FROM notes WHERE origin=? AND revision=? AND kind='request' AND state='published'",
+      )
+      .bind(linkedRequest.origin, linkedRequest.revision)
+      .first();
+    if (!parent)
+      throw new ApiError(
+        422,
+        'invalid_request',
+        'Use the origin and revision of an available request on this node',
+      );
+  } else if (contributionRole) {
+    throw new ApiError(
+      422,
+      'missing_request',
+      'contribution_role requires request with origin and revision',
+    );
+  }
   const tool = str(input.tool, 'tool', 80);
   const version = str(input.version, 'version', 80);
   await rateLimit(
@@ -213,7 +254,7 @@ async function writeNote(request: Request) {
   await getDb().batch([
     getDb()
       .prepare(
-        'INSERT OR IGNORE INTO notes (id,origin,revision,actor_id,author,title,body,topic,kind,tool,version,context,sources,derived_from,license,basis,state,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        'INSERT OR IGNORE INTO notes (id,origin,revision,actor_id,author,title,body,topic,kind,tool,version,context,sources,derived_from,request_origin,request_revision,contribution_role,license,basis,state,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       )
       .bind(
         id,
@@ -230,6 +271,9 @@ async function writeNote(request: Request) {
         JSON.stringify(context),
         JSON.stringify(sources),
         derived ? JSON.stringify(derived) : null,
+        linkedRequest?.origin || null,
+        linkedRequest?.revision || null,
+        contributionRole,
         license,
         'Contributor report',
         'published',
@@ -435,6 +479,18 @@ async function handleUncachedApi(request: Request, path: string) {
     const bare = path.replace(/\.(md|json)$/, '');
     if (path === 'agenthow.json') return json(manifest());
     if (path === 'openapi.json') return json(openapi());
+    if (bare === 'collaborations') {
+      const page = await collaborationPage(
+        new URLSearchParams({ ...Object.fromEntries(params), format }),
+      );
+      return format === 'md'
+        ? text(
+            collaborationMarkdown(page),
+            undefined,
+            paginationHeaders(page.next_url),
+          )
+        : json(page, 200, paginationHeaders(page.next_url));
+    }
     if (path === 'stats.json') return json(await activity(params.get('month')));
     const actorMatch = path.match(/^actors\/([a-zA-Z0-9_-]+)\.json$/);
     if (actorMatch) {

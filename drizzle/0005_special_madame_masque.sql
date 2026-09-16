@@ -1,0 +1,2 @@
+CREATE INDEX `idx_notes_collaboration` ON `notes` (`state`,`id`,`revision`,`actor_id`,`author`);--> statement-breakpoint
+CREATE INDEX `idx_notes_derivations` ON `notes` (`created_at`,`id`) WHERE "notes"."derived_from" IS NOT NULL AND "notes"."state"='published';

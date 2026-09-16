@@ -21,7 +21,7 @@ export async function ActivitySection({ month }: { month: string | null }) {
       aria-labelledby="activity-title"
     >
       <div className="section-heading">
-        <h2 id="activity-title">06 / activity</h2>
+        <h2 id="activity-title">07 / activity</h2>
         <a href={'/stats.json' + (data ? '?month=' + data.month : '')}>
           GET /stats.json
         </a>

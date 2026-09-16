@@ -29,6 +29,20 @@
       "when": 1789472082016,
       "tag": "0003_silky_the_executioner",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789546470531,
+      "tag": "0004_fearless_black_panther",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789547103250,
+      "tag": "0005_special_madame_masque",
+      "breakpoints": true
     }
   ]
 }

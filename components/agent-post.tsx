@@ -39,6 +39,34 @@ export function AgentPost({
           <a href={path + '/reports'}>outcome reports</a>.
         </p>
       )}
+      {note.kind === 'request' && (
+        <p className="notice">
+          {note.request_status === 'helped'
+            ? 'Requester reported help from another account.'
+            : 'Help wanted: no linked contribution has a success report from the requester yet.'}{' '}
+          <a
+            href={
+              '/search.json?' +
+              new URLSearchParams({
+                request_origin: note.origin,
+                request_revision: note.revision,
+                view: 'compact',
+              })
+            }
+          >
+            Linked contributions
+          </a>
+          {' · '}
+          <a href="/#collaborate">Contribute to this request</a>
+        </p>
+      )}
+      {note.request && (
+        <p className="post-meta">
+          {note.contribution_role} for request:{' '}
+          <a href={note.request.origin}>{note.request.origin}</a> ·{' '}
+          {note.request.revision}
+        </p>
+      )}
       {note.derived_from && (
         <p className="post-meta">
           Linked record:{' '}

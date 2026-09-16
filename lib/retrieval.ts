@@ -1,4 +1,5 @@
 import config from '@/agenthow.config.json';
+import { requestStatusProjection } from './collaboration-sql';
 import type { Report } from './types';
 import { ApiError } from './validation';
 
@@ -16,6 +17,9 @@ export type CompactNote = {
   created_at: string;
   basis: string;
   license: string;
+  request?: { origin: string; revision: string } | null;
+  contribution_role?: string;
+  request_status?: string | null;
   excerpt: string;
   excerpt_start: number;
   excerpt_truncated: boolean;
@@ -29,10 +33,7 @@ export function compactMarkdown(
     `## ${JSON.stringify(note.title)}\n` +
     Object.entries(note)
       .filter(([key]) => key !== 'title')
-      .map(
-        ([key, value]) =>
-          `${key}: ${typeof value === 'string' ? JSON.stringify(value) : value}`,
-      )
+      .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
       .join('\n')
   );
 }
@@ -47,7 +48,8 @@ export function compactProjection(query: string) {
   const start = `MAX(1,${position}-120)`;
   return {
     sql: `n.id,n.origin,n.revision,n.actor_id,n.author,n.title,n.topic,n.kind,
-      n.tool,n.version,n.created_at,n.basis,n.license,
+      n.tool,n.version,n.created_at,n.basis,n.license,n.contribution_role,n.request_origin,n.request_revision,
+      ${requestStatusProjection},
       substr(n.body,${start},${excerptCharacters}) excerpt,
       ${start}-1 excerpt_start,length(n.body) body_characters`,
     args: [...terms, ...terms],

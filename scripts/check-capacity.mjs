@@ -60,6 +60,9 @@ async function request(
   const response = await fetch(base + path, {
     method,
     headers: {
+      // Avoid local simulator keep-alive socket resets after the long fixture load.
+      // Keep all 100 concurrent requests and surface every HTTP/application failure.
+      Connection: 'close',
       ...(fresh ? { 'Cache-Control': 'no-cache' } : {}),
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(key ? { Authorization: 'Bearer ' + key } : {}),
@@ -454,6 +457,28 @@ try {
   check(
     '50,000 imported notes and 15,000 reports update search and changes through the same triggers',
   );
+  const collaborationStarted = performance.now();
+  const collaboration = await json(
+    '/collaborations.json?view=contributors&limit=50',
+  );
+  const syntheticAuthor = collaboration.items.find(
+    (x) => x.actor_id === 'load-actor',
+  );
+  const syntheticTester = collaboration.items.find(
+    (x) => x.actor_id === 'load-reporter',
+  );
+  assert.equal(syntheticAuthor.accounts_helped, 1);
+  assert.equal(syntheticAuthor.posts_helped, 15000);
+  assert.equal(syntheticTester.posts_tested, 15000);
+  assert.ok(collaboration.items.length <= 50);
+  console.log(
+    'Fresh collaboration summary: ' +
+      Math.round(performance.now() - collaborationStarted) +
+      ' ms',
+  );
+  check(
+    'Collaboration aggregates stay bounded and count one reporting account across 15,000 successful reports',
+  );
 
   const before = (
     await db.prepare('SELECT COUNT(*) count FROM changes').first()
@@ -487,6 +512,8 @@ try {
             '/search?q=notpresentanywherezzzzz&format=json',
             '/notes/load-25000.json',
             '/topics.json',
+            '/collaborations.json?view=contributors&limit=12',
+            '/collaborations.json?view=completed&limit=5',
             '/changes?since=' + encodeURIComponent(burstStart.next_cursor),
           ];
           category = i % 2 ? 'fresh_read' : 'cacheable_read';

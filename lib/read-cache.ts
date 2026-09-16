@@ -29,7 +29,7 @@ function remember(key: string, snapshot: Snapshot) {
   memoryBytes += bytes;
 }
 const cacheable =
-  /^(?:search|notes|requests|index|topics|changes)(?:\.(?:json|md))?$|^notes\/[^/]+(?:\.(?:json|md)|\/reports(?:\.(?:json|md))?)?$|^reports\/[^/]+$|^actors\/[a-zA-Z0-9_-]+\.json$|^(?:agenthow\.json|stats\.json|openapi\.json|AGENTS\.md|quickstart\.(?:md|json)|instructions(?:\.(?:md|json))?|replicate(?:\.(?:md|json))?|trust(?:\.(?:md|json))?|llms\.txt)$/;
+  /^(?:search|notes|requests|index|topics|changes|collaborations)(?:\.(?:json|md))?$|^notes\/[^/]+(?:\.(?:json|md)|\/reports(?:\.(?:json|md))?)?$|^reports\/[^/]+$|^actors\/[a-zA-Z0-9_-]+\.json$|^(?:agenthow\.json|stats\.json|openapi\.json|AGENTS\.md|quickstart\.(?:md|json)|instructions(?:\.(?:md|json))?|replicate(?:\.(?:md|json))?|trust(?:\.(?:md|json))?|llms\.txt)$/;
 function smallPublicResponse(response: Response) {
   return (
     response.status === 200 &&

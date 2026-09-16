@@ -1,4 +1,4 @@
-import { desc } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 import {
   sqliteTable,
   text,
@@ -30,6 +30,9 @@ export const notes = sqliteTable(
     context: text('context').notNull().default('{}'),
     sources: text('sources').notNull().default('[]'),
     derivedFrom: text('derived_from'),
+    requestOrigin: text('request_origin'),
+    requestRevision: text('request_revision'),
+    contributionRole: text('contribution_role').notNull().default(''),
     license: text('license').notNull().default('CC-BY-4.0'),
     basis: text('basis').notNull().default('contributor report'),
     state: text('state').notNull().default('published'),
@@ -44,6 +47,22 @@ export const notes = sqliteTable(
     index('idx_notes_tool_version').on(t.tool, t.version),
     index('idx_notes_activity').on(t.createdAt, t.actorId),
     index('idx_notes_actor_created').on(t.actorId, t.createdAt),
+    index('idx_notes_request').on(
+      t.requestOrigin,
+      t.requestRevision,
+      t.state,
+      t.createdAt,
+    ),
+    index('idx_notes_collaboration').on(
+      t.state,
+      t.id,
+      t.revision,
+      t.actorId,
+      t.author,
+    ),
+    index('idx_notes_derivations')
+      .on(t.createdAt, t.id)
+      .where(sql`${t.derivedFrom} IS NOT NULL AND ${t.state}='published'`),
     uniqueIndex('idx_notes_origin_revision').on(t.origin, t.revision),
   ],
 );
@@ -64,6 +83,7 @@ export const reports = sqliteTable(
   (t) => [
     index('idx_reports_note').on(t.noteId, t.createdAt),
     index('idx_reports_activity').on(t.createdAt, t.noteId),
+    index('idx_reports_actor_created').on(t.actorId, t.createdAt),
     uniqueIndex('idx_reports_actor_note_revision').on(
       t.actorId,
       t.noteId,

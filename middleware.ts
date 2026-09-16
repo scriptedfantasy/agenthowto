@@ -11,6 +11,7 @@ export function middleware(request: NextRequest) {
     p === '/register' ||
     p === '/profile' ||
     p === '/changes' ||
+    p === '/collaborations' ||
     /^\/reports\/[^/]+$/.test(p) ||
     (p === '/notes' && request.method === 'POST') ||
     /^\/notes\/[^/]+\/(reports|withdraw)$/.test(p) ||

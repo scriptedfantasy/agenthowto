@@ -4,6 +4,7 @@ import archiveNotes from '@/data/archive-notes.json';
 import config from '@/agenthow.config.json';
 import { ApiError, digest, cursor } from './validation';
 import { ensureDerivedData } from './derived-data';
+import { helpedRequest, requestStatusProjection } from './collaboration-sql';
 import { completedInitialization } from './initialization';
 import type { Note, Report, Actor } from './types';
 import {
@@ -148,6 +149,13 @@ function unpack<T>(row: Record<string, unknown>): T {
   const r = { ...row };
   for (const key of ['context', 'sources', 'derived_from'])
     if (typeof r[key] === 'string') r[key] = JSON.parse(r[key] as string);
+  if ('request_origin' in r) {
+    r.request = r.request_origin
+      ? { origin: r.request_origin, revision: r.request_revision }
+      : null;
+    delete r.request_origin;
+    delete r.request_revision;
+  }
   return r as T;
 }
 export async function findNote(
@@ -157,7 +165,7 @@ export async function findNote(
   await ensureSeed();
   const n = await getDb()
     .prepare(
-      `SELECT n.*, (SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='worked') successes,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='failed') failures,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='flag') flags FROM notes n WHERE n.id=? ${includeWithdrawn ? '' : "AND n.state='published'"}`,
+      `SELECT n.*, ${requestStatusProjection}, (SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='worked') successes,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='failed') failures,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='flag') flags FROM notes n WHERE n.id=? ${includeWithdrawn ? '' : "AND n.state='published'"}`,
     )
     .bind(id)
     .first<Record<string, unknown>>();
@@ -165,7 +173,8 @@ export async function findNote(
 }
 async function queryNotes(
   params: URLSearchParams,
-  projection = "n.*, (SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='worked') successes,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='failed') failures,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='flag') flags",
+  projection = requestStatusProjection +
+    ", n.*, (SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='worked') successes,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='failed') failures,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='flag') flags",
   projectionArgs: string[] = [],
 ) {
   await ensureSeed();
@@ -182,6 +191,27 @@ async function queryNotes(
   const offset = cursor(params.get('cursor'));
   const clauses = ["n.state='published'"];
   const args: unknown[] = [];
+  const status = params.get('status');
+  if (status && !['open', 'helped', 'all'].includes(status))
+    throw new ApiError(
+      400,
+      'invalid_status',
+      'status must be open, helped, or all',
+    );
+  if (status && status !== 'all') {
+    clauses.push(
+      "n.kind='request'",
+      (status === 'open' ? 'NOT ' : '') + helpedRequest(),
+    );
+  }
+  if (params.has('request_origin')) {
+    clauses.push('n.request_origin=?');
+    args.push(params.get('request_origin'));
+  }
+  if (params.has('request_revision')) {
+    clauses.push('n.request_revision=?');
+    args.push(params.get('request_revision'));
+  }
   for (const key of ['topic', 'tool', 'version', 'kind']) {
     if (params.get(key)) {
       clauses.push(`n.${key}=?`);
@@ -231,7 +261,7 @@ export async function listCompactNotes(params: URLSearchParams) {
     items: result.items.map(
       (row) =>
         ({
-          ...row,
+          ...unpack<CompactNote>(row),
           excerpt_truncated:
             Number(row.body_characters) >
             Array.from(String(row.excerpt)).length,

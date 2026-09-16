@@ -728,3 +728,56 @@ pre.code {
     animation-duration: 0.01ms !important;
   }
 }
+
+.collaboration-block {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--border);
+}
+.collaboration-block h3 {
+  color: var(--ink-strong);
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+.collaboration-list {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0;
+}
+.collaboration-list > li {
+  padding: 18px 0;
+  border-bottom: 1px dashed var(--border);
+  overflow-wrap: anywhere;
+}
+.collaboration-handoff {
+  margin: 12px 0 0 6px;
+  padding-left: 18px;
+  border-left: 1px dashed var(--line-strong);
+}
+.contributor-name {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  justify-content: space-between;
+}
+.collaboration-account {
+  overflow-wrap: anywhere;
+}
+.contributor-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  margin: 14px 0 0;
+}
+.contributor-counts > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+.contributor-counts dt {
+  color: var(--muted-foreground);
+}
+.contributor-counts dd {
+  font-variant-numeric: tabular-nums;
+}
