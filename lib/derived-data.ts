@@ -5,17 +5,28 @@ import { ApiError } from './validation';
 // restartable batches; new writes maintain their own index and events atomically.
 export async function ensureDerivedData() {
   const db = getDb();
+  const states = await db
+    .prepare(
+      "SELECT job,position,complete FROM maintenance WHERE job IN ('notes','reports')",
+    )
+    .all<{ job: string; position: number; complete: number }>();
   for (const job of ['notes', 'reports'] as const) {
-    await db
-      .prepare('INSERT OR IGNORE INTO maintenance(job) VALUES (?)')
-      .bind(job)
-      .run();
+    let state = states.results.find((row) => row.job === job);
+    if (state?.complete) continue;
+    if (!state) {
+      await db
+        .prepare('INSERT OR IGNORE INTO maintenance(job) VALUES (?)')
+        .bind(job)
+        .run();
+    }
     let done = false;
     for (let batch = 0; batch < 2; batch++) {
-      const state = await db
-        .prepare('SELECT position,complete FROM maintenance WHERE job=?')
-        .bind(job)
-        .first<{ position: number; complete: number }>();
+      if (!state || batch > 0) {
+        state = (await db
+          .prepare('SELECT job,position,complete FROM maintenance WHERE job=?')
+          .bind(job)
+          .first<{ job: string; position: number; complete: number }>())!;
+      }
       if (state!.complete) {
         done = true;
         break;

@@ -107,6 +107,45 @@ try {
       'Fixture reporter','worked','{}','evidence-'||i,'2026-09-02T00:00:00.000Z' FROM seq`)
     .run();
 
+  // Batched homepage previews must stay per-record and preserve server-rendered
+  // content for readers that never run JavaScript.
+  const home = (
+    await (await request('/?topic=bounded-test&month=2026-09')).text()
+  ).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  const article = (id) =>
+    home.match(
+      new RegExp('<article id="note-' + id + '"[\\s\\S]*?</article>'),
+    )?.[0];
+  assert.ok(article('compact-0')?.includes('evidence-204'));
+  assert.ok(article('compact-0')?.includes('evidence-203'));
+  assert.ok(article('compact-0')?.includes('evidence-202'));
+  assert.ok(!article('compact-0')?.includes('evidence-201'));
+  assert.ok(!article('compact-1')?.includes('evidence-204'));
+  assert.ok(article('compact-2')?.includes('Help wanted'));
+  for (const id of [
+    'instructions',
+    'replicate',
+    'rules',
+    'collaborations',
+    'activity',
+  ])
+    assert.ok(
+      home.includes('id="' + id + '"'),
+      'Server-rendered section ' + id,
+    );
+  const stats = await json('/stats.json?month=2026-09');
+  assert.equal(stats.totals.posts, 3);
+  assert.equal(stats.totals.entities, 1);
+  assert.equal(
+    stats.observations.other_origin_entities +
+      stats.observations.origins.reduce(
+        (sum, group) => sum + group.entities,
+        0,
+      ),
+    1,
+  );
+  assert.ok(!/D1_ERROR|SQLITE_ERROR|SERVER ERROR/.test(home));
+
   const fullResponse = await request('/search.json?topic=bounded-test');
   const fullText = await fullResponse.text();
   assert.equal(JSON.parse(fullText).items[0].body, body);

@@ -3,7 +3,7 @@ import { ApiError } from '@/lib/validation';
 import { ActivityChart } from './activity-chart';
 import { ActivityObservations } from './activity-observations';
 
-export async function ActivitySection({ month }: { month: string | null }) {
+export async function loadActivitySection(month: string | null) {
   let data;
   let error = '';
   try {
@@ -14,6 +14,22 @@ export async function ActivitySection({ month }: { month: string | null }) {
         ? caught.message
         : 'Activity counts are temporarily unavailable. Reload to try again.';
   }
+  return { data, error };
+}
+
+export function ActivitySection({
+  data,
+  error,
+}: Awaited<ReturnType<typeof loadActivitySection>>) {
+  // Only the chart's inputs cross the client boundary. Observation details
+  // are rendered below on the server and must not be serialized a second time.
+  const chart = data && {
+    month: data.month,
+    timezone: data.timezone,
+    through: data.through,
+    totals: data.totals,
+    days: data.days,
+  };
   return (
     <section
       id="activity"
@@ -40,8 +56,8 @@ export async function ActivitySection({ month }: { month: string | null }) {
         <button type="submit">Show</button>
         <span className="quiet">UTC · today is still in progress</span>
       </form>
-      {data ? (
-        <ActivityChart key={data.month} data={data} />
+      {chart ? (
+        <ActivityChart key={chart.month} data={chart} />
       ) : (
         <p className="notice" role="alert">
           {error}

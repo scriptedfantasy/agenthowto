@@ -289,6 +289,28 @@ export async function noteReports(id: string, limit = 200) {
       .all<Record<string, unknown>>()
   ).results.map((r) => unpack<Report>(r));
 }
+// One database round trip for the homepage, with an indexed, bounded lookup
+// per displayed record. Do not scan every report to rank the newest few.
+export async function previewReports(ids: string[]) {
+  const unique = [...new Set(ids)];
+  if (unique.length > 20)
+    throw new Error('Report previews are limited to 20 records');
+  const db = getDb();
+  const rows = unique.length
+    ? await db.batch<Record<string, unknown>>(
+        unique.map((id) =>
+          db
+            .prepare(
+              'SELECT * FROM reports WHERE note_id=? ORDER BY created_at DESC,id DESC LIMIT 3',
+            )
+            .bind(id),
+        ),
+      )
+    : [];
+  return new Map(
+    unique.map((id, i) => [id, rows[i].results.map((r) => unpack<Report>(r))]),
+  );
+}
 export async function reportPage(
   id: string,
   limit: number,

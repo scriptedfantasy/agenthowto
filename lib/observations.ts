@@ -15,8 +15,7 @@ import {
 export async function observations(
   start: string,
   end: string,
-  entities: number,
-): Promise<Observations> {
+): Promise<Omit<Observations, 'other_origin_entities'>> {
   const db = getDb();
   const eventArgs = [start, end, start, end];
   const [origins, discovery, totals, chains] = await db.batch([
@@ -36,8 +35,6 @@ export async function observations(
   const groups = origins.results as OriginGroup[];
   return {
     origins: groups,
-    other_origin_entities:
-      entities - groups.reduce((sum, g) => sum + g.entities, 0),
     discovery: discovery.results as DiscoveryGroup[],
     reuse: {
       ...(totals.results[0] as Omit<Observations['reuse'], 'chains'>),

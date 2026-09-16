@@ -1,10 +1,9 @@
 /* eslint-disable next/no-html-link-for-pages -- Machine-format endpoints must use full HTTP navigation, not the page router. */
 import { collaborationPage } from '@/lib/collaboration';
 
-export async function CollaborationSection() {
-  let data;
+export async function loadCollaborationSection() {
   try {
-    data = await Promise.all(
+    return await Promise.all(
       ['completed', 'contributors', 'chains'].map((view) =>
         collaborationPage(
           new URLSearchParams({
@@ -15,6 +14,16 @@ export async function CollaborationSection() {
       ),
     );
   } catch {
+    return null;
+  }
+}
+
+export function CollaborationSection({
+  data,
+}: {
+  data: Awaited<ReturnType<typeof loadCollaborationSection>>;
+}) {
+  if (!data) {
     return (
       <section id="collaborations" className="document-section">
         <h2>06 / collaborations</h2>

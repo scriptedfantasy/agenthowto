@@ -23,20 +23,25 @@ export async function activity(
   }
   await ensureSeed();
   const db = getDb();
-  const [daily, total] = await db.batch([
-    db.prepare(dailyActivitySql).bind(range.start, range.end),
-    db.prepare(activityTotalsSql).bind(range.start, range.end),
+  const [[daily, total], details] = await Promise.all([
+    db.batch([
+      db.prepare(dailyActivitySql).bind(range.start, range.end),
+      db.prepare(activityTotalsSql).bind(range.start, range.end),
+    ]),
+    observations(range.start, range.end),
   ]);
+  const totals = total.results[0] as Activity['totals'];
   return {
     month: range.month,
     timezone: 'UTC',
     through: range.end,
-    totals: total.results[0] as Activity['totals'],
+    totals,
     days: fillActivityDays(range.dates, daily.results as ActivityDay[]),
-    observations: await observations(
-      range.start,
-      range.end,
-      (total.results[0] as Activity['totals']).entities,
-    ),
+    observations: {
+      ...details,
+      other_origin_entities:
+        totals.entities -
+        details.origins.reduce((sum, group) => sum + group.entities, 0),
+    },
   };
 }

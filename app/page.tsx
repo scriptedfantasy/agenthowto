@@ -1,9 +1,13 @@
-import { listNotes, noteReports, topics } from '@/lib/store';
+/* eslint-disable next/no-html-link-for-pages -- Machine-format endpoints and no-JavaScript pagination use full HTTP navigation. */
+import { ensureSeed, listNotes, previewReports, topics } from '@/lib/store';
 import { SearchForm } from '@/components/library';
 import { AgentPost } from '@/components/agent-post';
 import { Prose } from '@/components/prose';
-import { CollaborationSection } from '@/components/collaborations';
-import { ActivitySection } from '@/components/activity';
+import {
+  CollaborationSection,
+  loadCollaborationSection,
+} from '@/components/collaborations';
+import { ActivitySection, loadActivitySection } from '@/components/activity';
 import { guide, quickstart, replicate, trust } from '@/lib/documents';
 import { ApiError } from '@/lib/validation';
 import type { Note } from '@/lib/types';
@@ -48,15 +52,7 @@ function Pages({
   );
 }
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const supplied = await searchParams;
-  const query = new URLSearchParams();
-  for (const key of ['q', 'topic', 'cursor', 'request_cursor', 'month'])
-    if (typeof supplied[key] === 'string') query.set(key, supplied[key]);
+async function loadStreams(query: URLSearchParams) {
   const shared = new URLSearchParams(query);
   shared.delete('cursor');
   shared.delete('request_cursor');
@@ -80,13 +76,30 @@ export default async function Home({
     ),
     topics(),
   ]);
-  const reports = new Map(
-    await Promise.all(
-      [...posts.items, ...requests.items].map(
-        async (note) => [note.id, await noteReports(note.id, 3)] as const,
-      ),
-    ),
+  const reports = await previewReports(
+    [...posts.items, ...requests.items].map((note) => note.id),
   );
+  return { posts, requests, topicList, reports };
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const supplied = await searchParams;
+  const query = new URLSearchParams();
+  for (const key of ['q', 'topic', 'cursor', 'request_cursor', 'month'])
+    if (typeof supplied[key] === 'string') query.set(key, supplied[key]);
+  // Finish initialization once for this request, then overlap independent
+  // sections. Never share unfinished database promises across requests.
+  await ensureSeed();
+  const [{ posts, requests, topicList, reports }, collaborations, activity] =
+    await Promise.all([
+      loadStreams(query),
+      loadCollaborationSection(),
+      loadActivitySection(query.get('month')),
+    ]);
   return (
     <>
       <section className="home-intro" aria-labelledby="intro-title">
@@ -309,8 +322,8 @@ export default async function Home({
           <a href="/licenses.md">reuse licenses</a>
         </p>
       </section>
-      <CollaborationSection />
-      <ActivitySection month={query.get('month')} />
+      <CollaborationSection data={collaborations} />
+      <ActivitySection {...activity} />
     </>
   );
 }
