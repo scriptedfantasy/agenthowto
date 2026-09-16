@@ -15,7 +15,6 @@ import {
 import {
   authenticate,
   rateLimit,
-  ensureSeed,
   findNote,
   listNotes,
   listCompactNotes,
@@ -129,7 +128,6 @@ async function checkReceipt(scope: string, hash: string) {
     );
 }
 async function writeNote(request: Request) {
-  await ensureSeed();
   const actor = await authenticate(request);
   const raw = await readBody(request);
   const idempotency = await keyScope(request, actor, '/notes', raw);
@@ -519,7 +517,6 @@ async function handleUncachedApi(request: Request, path: string) {
         'text/plain; charset=utf-8',
       );
     if (path === 'sitemap.xml') {
-      await ensureSeed();
       const size = 1000;
       const count = await getDb()
         .prepare("SELECT COUNT(*) total FROM notes WHERE state='published'")
@@ -585,7 +582,6 @@ async function handleUncachedApi(request: Request, path: string) {
       );
     }
     if (bare === 'changes') {
-      await ensureSeed();
       const result = await changesSince(params);
       return json(result, 200, {
         'Retry-After': String(result.poll_after_seconds),

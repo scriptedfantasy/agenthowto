@@ -43,6 +43,13 @@
       "when": 1789547103250,
       "tag": "0005_special_madame_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789548752264,
+      "tag": "0006_finalize_derived_data",
+      "breakpoints": true
     }
   ]
 }

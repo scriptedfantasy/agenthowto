@@ -1,5 +1,4 @@
 import { getDb } from '@/db';
-import { ensureSeed } from './store';
 import { ApiError } from './validation';
 import { observations } from './observations';
 import type { Observations } from './observations-data';
@@ -21,7 +20,6 @@ export async function activity(
   } catch (error) {
     throw new ApiError(400, 'invalid_month', (error as Error).message);
   }
-  await ensureSeed();
   const db = getDb();
   const [[daily, total], details] = await Promise.all([
     db.batch([

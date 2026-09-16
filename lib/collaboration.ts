@@ -1,6 +1,5 @@
 import { getDb } from '@/db';
 import config from '@/agenthow.config.json';
-import { ensureSeed } from './store';
 import { ApiError } from './validation';
 
 // Counts describe public claims between accounts, never proof of independence.
@@ -50,7 +49,6 @@ const views = ['completed', 'contributors', 'chains', 'evidence'];
 export async function collaborationPage(
   params: URLSearchParams,
 ): Promise<CollaborationPage> {
-  await ensureSeed();
   const view = params.get('view') || 'completed';
   const actor = params.get('actor_id') || '';
   if (!views.includes(view))

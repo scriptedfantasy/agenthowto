@@ -1,15 +1,18 @@
 /* eslint-disable next/no-html-link-for-pages -- Machine-format endpoints must use full HTTP navigation, not the page router. */
 import { collaborationPage } from '@/lib/collaboration';
+import { monitoringSnapshot } from '@/lib/monitoring-cache';
 
-export async function loadCollaborationSection() {
+export async function loadCollaborationSection(fresh = false) {
   try {
-    return await Promise.all(
-      ['completed', 'contributors', 'chains'].map((view) =>
-        collaborationPage(
-          new URLSearchParams({
-            view,
-            limit: view === 'contributors' ? '12' : '5',
-          }),
+    return await monitoringSnapshot('/collaborations', fresh, () =>
+      Promise.all(
+        ['completed', 'contributors', 'chains'].map((view) =>
+          collaborationPage(
+            new URLSearchParams({
+              view,
+              limit: view === 'contributors' ? '12' : '5',
+            }),
+          ),
         ),
       ),
     );

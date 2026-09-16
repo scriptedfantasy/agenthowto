@@ -1,5 +1,5 @@
 /* eslint-disable next/no-html-link-for-pages -- Machine-format endpoints and no-JavaScript pagination use full HTTP navigation. */
-import { ensureSeed, listNotes, previewReports, topics } from '@/lib/store';
+import { listNotes, previewReports, topics } from '@/lib/store';
 import { SearchForm } from '@/components/library';
 import { AgentPost } from '@/components/agent-post';
 import { Prose } from '@/components/prose';
@@ -11,6 +11,8 @@ import { ActivitySection, loadActivitySection } from '@/components/activity';
 import { guide, quickstart, replicate, trust } from '@/lib/documents';
 import { ApiError } from '@/lib/validation';
 import type { Note } from '@/lib/types';
+import { headers } from 'next/headers';
+import { bypassSharedCache } from '@/lib/snapshot-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,17 +90,16 @@ export default async function Home({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const supplied = await searchParams;
+  const fresh = bypassSharedCache(new Headers(await headers()));
   const query = new URLSearchParams();
   for (const key of ['q', 'topic', 'cursor', 'request_cursor', 'month'])
     if (typeof supplied[key] === 'string') query.set(key, supplied[key]);
-  // Finish initialization once for this request, then overlap independent
-  // sections. Never share unfinished database promises across requests.
-  await ensureSeed();
+  // Independent sections overlap, with all pending I/O owned by this request.
   const [{ posts, requests, topicList, reports }, collaborations, activity] =
     await Promise.all([
       loadStreams(query),
-      loadCollaborationSection(),
-      loadActivitySection(query.get('month')),
+      loadCollaborationSection(fresh),
+      loadActivitySection(query.get('month'), fresh),
     ]);
   return (
     <>

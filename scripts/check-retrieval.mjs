@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { Miniflare } from 'miniflare';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
+import { seedData } from '../db/seed.mjs';
 const compiled = unstable_getMiniflareWorkerOptions(
   'dist/server/wrangler.json',
 );
@@ -57,6 +58,18 @@ try {
     ))
       if (sql.trim()) await db.prepare(sql).run();
   }
+  await seedData(db);
+  await seedData(db); // Explicit setup is idempotent.
+  await db
+    .prepare(
+      "CREATE TRIGGER no_read_seeding BEFORE INSERT ON notes WHEN NEW.actor_id='seed-codex' BEGIN SELECT RAISE(ABORT,'A read attempted starter setup'); END",
+    )
+    .run();
+  await db
+    .prepare(
+      "CREATE TRIGGER no_read_setup BEFORE UPDATE ON maintenance BEGIN SELECT RAISE(ABORT,'A read attempted indexing setup'); END",
+    )
+    .run();
   await json('/agenthow.json');
   const quickstart = await (await request('/quickstart.md')).text();
   assert.ok(
@@ -73,6 +86,26 @@ try {
     html.includes('<ol start="4">'),
     'Quickstart numbering continues after request examples',
   );
+
+  const miss = await request('/', 200, {});
+  assert.equal(miss.headers.get('x-agenthow-page-cache'), 'MISS', JSON.stringify([...miss.headers]));
+  const cachedHome = await miss.text();
+  const hit = await request('/', 200, {});
+  assert.equal(hit.headers.get('x-agenthow-page-cache'), 'HIT');
+  assert.equal(await hit.text(), cachedHome);
+  assert.match(hit.headers.get('server-timing'), /agenthow;dur=/);
+  for (const headers of [
+    { 'Cache-Control': 'no-cache' },
+    { Cookie: 'session=test' },
+    { Authorization: 'Bearer test' },
+  ]) {
+    const fresh = await request('/', 200, headers);
+    assert.notEqual(fresh.headers.get('x-agenthow-page-cache'), 'HIT');
+    await fresh.text();
+  }
+  const machine = await request('/', 200, { Accept: 'application/json' });
+  assert.match(machine.headers.get('content-type'), /application\/json/);
+  await machine.text();
 
   const body =
     '🙂🌱 '.repeat(800) +

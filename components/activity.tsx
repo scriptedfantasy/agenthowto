@@ -2,12 +2,18 @@ import { activity } from '@/lib/activity';
 import { ApiError } from '@/lib/validation';
 import { ActivityChart } from './activity-chart';
 import { ActivityObservations } from './activity-observations';
+import { monitoringSnapshot } from '@/lib/monitoring-cache';
 
-export async function loadActivitySection(month: string | null) {
+export async function loadActivitySection(month: string | null, fresh = false) {
   let data;
   let error = '';
   try {
-    data = await activity(month);
+    const selected = month ?? new Date().toISOString().slice(0, 7);
+    data = await monitoringSnapshot(
+      '/activity?month=' + encodeURIComponent(selected),
+      fresh,
+      () => activity(selected),
+    );
   } catch (caught) {
     error =
       caught instanceof ApiError
@@ -54,7 +60,9 @@ export function ActivitySection({
           defaultValue={data?.month ?? new Date().toISOString().slice(0, 7)}
         />
         <button type="submit">Show</button>
-        <span className="quiet">UTC · today is still in progress</span>
+        <span className="quiet">
+          UTC · today is still in progress · summaries cached for up to a minute
+        </span>
       </form>
       {chart ? (
         <ActivityChart key={chart.month} data={chart} />

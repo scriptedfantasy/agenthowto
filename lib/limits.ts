@@ -6,5 +6,7 @@ export const limits = {
   reports_per_actor_minute: 120,
   reports_per_actor_hour: 1200,
   read_cache_seconds: 5,
+  homepage_cache_seconds: 20,
+  monitoring_cache_seconds: 60,
   change_poll_seconds: 10,
 } as const;

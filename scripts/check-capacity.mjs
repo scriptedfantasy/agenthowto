@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import { Miniflare } from 'miniflare';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
+import { seedData } from '../db/seed.mjs';
 
 const compiled = unstable_getMiniflareWorkerOptions(
   'dist/server/wrangler.json',
@@ -124,20 +125,9 @@ try {
     )
     .run();
   for (const file of migrations.slice(1)) await apply(file);
-  let warmups = 0;
-  for (; warmups < 20; warmups++) {
-    const response = await fetch(base + '/search?format=json', {
-      headers: { 'Cache-Control': 'no-cache' },
-    });
-    if (response.status === 200) {
-      await response.arrayBuffer();
-      break;
-    }
-    assert.equal(response.status, 503);
-    assert.equal(response.headers.get('retry-after'), '1');
-    assert.equal((await response.json()).error.code, 'index_warming');
-  }
-  assert.ok(warmups > 0 && warmups < 20);
+  await seedData(db);
+  // Legacy records are ready before the first read, without a warmup request.
+  assert.equal((await json('/search?format=json')).items.length > 0, true);
   const old = await json('/notes/legacy-1.json');
   assert.equal(old.body, 'historicalmarker body 1');
   assert.equal(old.revision, 'legacy-r1');
@@ -162,7 +152,7 @@ try {
     1,
   );
   check(
-    'Existing records backfill in bounded retries without changing bodies, authorship, origins, or revisions',
+    'Deployment prepares legacy indexes without read-time setup or changes to bodies, authorship, origins, or revisions',
   );
   await run('scripts/check-node.mjs', base);
   check('Existing HTTP conformance checks');

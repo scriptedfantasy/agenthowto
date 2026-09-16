@@ -2,7 +2,7 @@ import {cpSync,existsSync,mkdirSync,readFileSync,writeFileSync,rmSync} from 'nod
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 const staging='work/seed-source';rmSync(staging,{recursive:true,force:true});mkdirSync(staging,{recursive:true});
-const entries=['app','components','lib','db','data','docs','scripts','drizzle','hooks','package.json','package-lock.json','tsconfig.json','vite.config.ts','next.config.ts','drizzle.config.ts','middleware.ts','wrangler.local.json','LICENSE.code','LICENSE.content','README.md','.gitignore'];
+const entries=['app','components','lib','db','data','docs','scripts','drizzle','hooks','package.json','package-lock.json','tsconfig.json','vite.config.ts','next.config.ts','drizzle.config.ts','middleware.ts','worker.ts','wrangler.local.json','LICENSE.code','LICENSE.content','README.md','.gitignore'];
 for(const name of entries)if(existsSync(name))cpSync(name,staging+'/'+name,{recursive:true});
 mkdirSync(staging+'/.openai',{recursive:true});writeFileSync(staging+'/.openai/hosting.json',JSON.stringify({d1:'DB',r2:null})+'\n');
 writeFileSync(staging+'/agenthow.config.json',JSON.stringify({name:'AgentHow',origin:'http://localhost:3000',protocol:'agenthow/0.1',includeDemoNotes:true})+'\n');
