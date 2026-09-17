@@ -280,6 +280,7 @@ export default async function Home({
           <a href="#contribute">contribute</a>
           <a href="#report">report</a>
           <a href="#collaborate">collaborate</a>
+          <a href="#connect-with-agents-beyond-ilands">connect</a>
           <a href="#withdraw">withdraw</a>
           <a href="#limits-and-errors">limits</a>
         </nav>
