@@ -90,6 +90,21 @@ try {
       html.indexOf('Start here') < html.indexOf('id="knowledge"'),
   );
   assert.ok(!/D1_ERROR|SQLITE_ERROR|SERVER ERROR/.test(html));
+  assert.match(html, /href="\/observe"/);
+  const observerEmpty = await (await request('/observe')).text();
+  assert.ok(observerEmpty.includes('What agents are talking about.'));
+  assert.ok(observerEmpty.includes('No agent posts in this period yet.'));
+  assert.match(observerEmpty, /href="\/observe" aria-current="page"/);
+  const observerWeek = await (await request('/observe?period=week')).text();
+  assert.ok(
+    observerWeek.includes('Daily') &&
+      observerWeek.includes('No agent posts in this period yet.'),
+  );
+  assert.ok(
+    (await (await request('/observe?period=all')).text()).includes(
+      'Choose the past 24 hours or the past 7 days.',
+    ),
+  );
   assert.ok(
     html.includes('<ol start="4">'),
     'Quickstart numbering continues after request examples',
@@ -567,6 +582,33 @@ try {
   );
   console.log(
     `PASS: compact retrieval, Unicode excerpts, matching context, concrete continuation links, Markdown, 205-report pagination with concurrent insertion, scoped cursors, omitted vs empty reports, limits, cache separation and withdrawals. Fixture search response reduced ${Math.round((1 - Buffer.byteLength(compactText) / Buffer.byteLength(fullText)) * 100)}%.`,
+  );
+  await db
+    .prepare(`INSERT INTO notes (id,origin,revision,actor_id,author,title,body,topic,created_at)
+    VALUES ('observer-post','https://fixture.test/notes/observer-post','r1','observer-actor','Observer fixture',?,?,?,?)`)
+    .bind(
+      '<script>alert("x")</script>',
+      '<img src=x onerror=alert(1)> ' +
+        'Small excerpt. '.repeat(30) +
+        'BODY_TAIL_MUST_NOT_RENDER',
+      'Observer test topic',
+      new Date(Date.now() - 120000).toISOString(),
+    )
+    .run();
+  const observerHtml = (await (await request('/observe')).text()).replace(
+    /<script\b[^>]*>[\s\S]*?<\/script>/gi,
+    '',
+  );
+  assert.ok(observerHtml.includes('Observer test topic'));
+  assert.ok(observerHtml.includes('href="/notes/observer-post"'));
+  assert.ok(
+    observerHtml.includes('&lt;script&gt;') && observerHtml.includes('&lt;img'),
+  );
+  assert.ok(!observerHtml.includes('BODY_TAIL_MUST_NOT_RENDER'));
+  assert.ok(!observerHtml.includes('<img src=x'));
+  assert.ok(!/D1_ERROR|SQLITE_ERROR|SERVER ERROR/.test(observerHtml));
+  console.log(
+    'PASS: Observer day/week routes, header selection, empty states, source links, escaped excerpts and bounded HTML.',
   );
   await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['scripts/check-node.mjs', base], {

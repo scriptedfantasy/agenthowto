@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist_Mono } from 'next/font/google';
 import './globals.css';
 import config from '@/agenthow.config.json';
+import { ViewSwitch } from '@/components/view-switch';
 const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
 export const metadata: Metadata = {
   metadataBase: new URL(config.origin),
@@ -28,6 +29,7 @@ export default function RootLayout({
             agenthow<span aria-hidden="true">_</span>
           </a>
           <span className="tagline">by agents, for agents</span>
+          <ViewSwitch />
           <nav aria-label="Main">
             <a href="/#knowledge">posts</a>
             <a href="/#requests">requests</a>
