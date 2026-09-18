@@ -1,6 +1,14 @@
 // Exercises the built Worker against an isolated local database. Never accepts a site URL.
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import {
+  readFileSync,
+  readdirSync,
+  mkdtempSync,
+  rmSync,
+  existsSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { Miniflare } from 'miniflare';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
@@ -88,7 +96,11 @@ try {
   );
 
   const miss = await request('/', 200, {});
-  assert.equal(miss.headers.get('x-agenthow-page-cache'), 'MISS', JSON.stringify([...miss.headers]));
+  assert.equal(
+    miss.headers.get('x-agenthow-page-cache'),
+    'MISS',
+    JSON.stringify([...miss.headers]),
+  );
   const cachedHome = await miss.text();
   const hit = await request('/', 200, {});
   assert.equal(hit.headers.get('x-agenthow-page-cache'), 'HIT');
@@ -365,6 +377,185 @@ try {
       .length,
     1,
   );
+  // Summaries cover all exact-revision reports even when report bodies are omitted.
+  const before = (await json('/notes/compact-0.json?reports_limit=0'))
+    .review_summary;
+  for (const [id, outcome, actor, revision] of [
+    ['older-failure', 'failed', 'failure-actor', 'r1'],
+    ['older-context', 'needs_context', 'context-actor', 'r1'],
+    ['author-update', 'worked', 'fixture', 'r1'],
+    ['wrong-revision', 'failed', 'wrong-actor', 'wrong'],
+  ])
+    await db
+      .prepare(`INSERT INTO reports(id,origin,note_id,revision,actor_id,author,outcome,context,evidence,created_at)
+    VALUES (?,?,'compact-0',?,?,?,?, '{}',?,'2026-09-01T00:00:00.000Z')`)
+      .bind(
+        id,
+        'https://fixture.test/reports/' + id,
+        revision,
+        actor,
+        actor,
+        outcome,
+        'Conditions for ' + id,
+      )
+      .run();
+  for (let i = 0; i < 6; i++)
+    await db
+      .prepare(`INSERT INTO notes
+    (id,origin,revision,actor_id,author,title,body,context,sources,derived_from,contribution_role,state,created_at)
+    VALUES (?,?,'r1','updater','Updater',?,'Correction evidence','{}','[]',?,?,?,'2026-09-03T00:00:00.000Z')`)
+      .bind(
+        'update-' + i,
+        'https://fixture.test/notes/update-' + i,
+        'Update ' + i,
+        JSON.stringify({
+          origin: 'https://fixture.test/notes/compact-0',
+          revision: i === 5 ? 'wrong' : 'r1',
+        }),
+        i === 0 ? 'correction' : '',
+        i === 4 ? 'withdrawn' : 'published',
+      )
+      .run();
+  const reviewed = await json('/notes/compact-0.json?reports_limit=0');
+  assert.equal(reviewed.review_summary.worked, before.worked + 1);
+  assert.equal(reviewed.review_summary.failed, before.failed + 1);
+  assert.equal(reviewed.review_summary.needs_context, before.needs_context + 1);
+  assert.equal(
+    reviewed.review_summary.author_reports,
+    before.author_reports + 1,
+  );
+  assert.equal(reviewed.review_summary.mixed_outcomes, true);
+  assert.equal(reviewed.review_summary.linked_updates, 4);
+  assert.equal(reviewed.review_summary.declared_corrections, 1);
+  assert.equal(reviewed.review_summary.updates.length, 3);
+  assert.equal(reviewed.review_summary.updates[0].id, 'update-0');
+  assert.equal(reviewed.review_summary.notices.length, 2);
+  assert.equal(
+    (await json(reviewed.review_summary.updates_url)).items.length,
+    4,
+  );
+  const reviewedHtml = (
+    await (await request('/notes/compact-0')).text()
+  ).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  assert.ok(
+    reviewedHtml.indexOf('Mixed reported outcomes') <
+      reviewedHtml.indexOf('Submitted post text'),
+  );
+  assert.ok(
+    reviewedHtml.includes('Latest reported failure') &&
+      reviewed.review_summary.notices.some((r) => r.id === 'newest'),
+  );
+  assert.ok(!reviewedHtml.includes('Update 4'));
+  const reviewedMd = await (
+    await request('/notes/compact-0.md?reports_limit=0')
+  ).text();
+  assert.ok(
+    reviewedMd.indexOf('mixed_outcomes') <
+      reviewedMd.indexOf('## Submitted post'),
+  );
+  const queryPlan = await db
+    .prepare(`EXPLAIN QUERY PLAN SELECT id FROM notes
+    WHERE state='published' AND derived_from IS NOT NULL
+      AND json_extract(derived_from,'$.origin')=? AND json_extract(derived_from,'$.revision')=?`)
+    .bind('https://fixture.test/notes/compact-0', 'r1')
+    .all();
+  assert.ok(
+    JSON.stringify(queryPlan.results).includes('idx_notes_derived_parent'),
+  );
+
+  // Imported note and report IDs can overlap across tables; neither may replace the other.
+  await db
+    .prepare(`INSERT INTO notes (id,origin,revision,actor_id,author,title,body,created_at)
+    VALUES ('report-000','https://fixture.test/notes/shared-id','r1','imported','Imported','Shared ID note','Distinct note body','2026-09-03T00:00:00.000Z')`)
+    .run();
+  // Every export page is explicit, includes outcome reports, and matches legacy NDJSON.
+  const exported = [];
+  let exportUrl = '/export.json';
+  let pages = 0;
+  while (exportUrl) {
+    const response = await request(exportUrl);
+    const page = await response.json();
+    assert.equal(page.has_more, page.next_url !== null);
+    assert.equal(page.included, page.items.length);
+    assert.ok(page.items.length <= 100);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    const legacyUrl = new URL(local(exportUrl));
+    legacyUrl.pathname = '/export.jsonl';
+    const legacy = (await (await request(legacyUrl.href)).text())
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map(JSON.parse);
+    assert.deepEqual(page.items, legacy);
+    if (page.next_url)
+      assert.equal(
+        response.headers.get('link'),
+        '<' + page.next_url + '>; rel="next"',
+      );
+    exported.push(...page.items);
+    exportUrl = page.next_url;
+    assert.ok(++pages < 20);
+  }
+  assert.ok(pages > 2);
+  assert.equal(
+    new Set(exported.map((r) => r.type + ':' + r.id)).size,
+    exported.length,
+  );
+  assert.ok(exported.some((r) => r.type === 'report'));
+  assert.ok(
+    exported.some(
+      (r) =>
+        r.type === 'note' &&
+        r.id === 'report-000' &&
+        r.body === 'Distinct note body',
+    ),
+  );
+  assert.ok(
+    exported.some(
+      (r) =>
+        r.type === 'report' &&
+        r.id === 'report-000' &&
+        r.evidence === 'evidence-0',
+    ),
+  );
+  assert.ok(
+    exported.some(
+      (r) => r.type === 'withdrawal' && r.id === 'update-4' && !('body' in r),
+    ),
+  );
+  const directory = mkdtempSync(join(tmpdir(), 'agenthow-export-'));
+  const output = join(directory, 'complete.jsonl');
+  const download = () =>
+    new Promise((resolve, reject) => {
+      const child = spawn(
+        process.execPath,
+        ['public/download-export.mjs', base, output],
+        { stdio: 'pipe' },
+      );
+      let stderr = '';
+      child.stderr.on('data', (b) => (stderr += b));
+      child.on('error', reject);
+      child.on('exit', (code) => resolve({ code, stderr }));
+    });
+  try {
+    const first = await download();
+    assert.equal(first.code, 0, first.stderr);
+    assert.match(first.stderr, /Complete traversal/);
+    assert.deepEqual(
+      readFileSync(output, 'utf8').trim().split('\n').map(JSON.parse),
+      exported,
+    );
+    assert.equal(existsSync(output + '.partial'), false);
+    const second = await download();
+    assert.equal(second.code, 1);
+    assert.ok(second.stderr.includes('Incomplete export'));
+    assert.deepEqual(
+      readFileSync(output, 'utf8').trim().split('\n').map(JSON.parse),
+      exported,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
   await db
     .prepare("UPDATE notes SET state='withdrawn' WHERE id='compact-0'")
     .run();

@@ -1,0 +1,1 @@
+CREATE INDEX `idx_notes_derived_parent` ON `notes` (json_extract("derived_from", '$.origin'), json_extract("derived_from", '$.revision'), "created_at") WHERE "derived_from" IS NOT NULL AND "state"='published';

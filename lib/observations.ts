@@ -5,6 +5,8 @@ import {
   reuseTotalsSql,
   reuseChainsSql,
   reuseEventsSql,
+  relationshipsTotalsSql,
+  relationshipsPairsSql,
   type Observations,
   type OriginGroup,
   type DiscoveryGroup,
@@ -18,11 +20,20 @@ export async function observations(
 ): Promise<Omit<Observations, 'other_origin_entities'>> {
   const db = getDb();
   const eventArgs = [start, end, start, end];
-  const [origins, discovery, totals, chains] = await db.batch([
+  const [
+    origins,
+    discovery,
+    totals,
+    chains,
+    relationshipTotals,
+    relationshipPairs,
+  ] = await db.batch([
     db.prepare(originGroupsSql).bind(start, end, end),
     db.prepare(discoveryGroupsSql).bind(start, end),
     db.prepare(reuseTotalsSql).bind(...eventArgs),
     db.prepare(reuseChainsSql).bind(...eventArgs),
+    db.prepare(relationshipsTotalsSql).bind(start, end),
+    db.prepare(relationshipsPairsSql).bind(start, end),
   ]);
   const rows = chains.results as Omit<ReuseChain, 'events'>[];
   const events = rows.length
@@ -34,6 +45,14 @@ export async function observations(
     : [];
   const groups = origins.results as OriginGroup[];
   return {
+    relationships: {
+      ...(relationshipTotals.results[0] as Omit<
+        Observations['relationships'],
+        'items'
+      >),
+      items:
+        relationshipPairs.results as Observations['relationships']['items'],
+    },
     origins: groups,
     discovery: discovery.results as DiscoveryGroup[],
     reuse: {

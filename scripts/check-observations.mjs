@@ -17,6 +17,8 @@ const {
   reuseTotalsSql,
   reuseChainsSql,
   reuseEventsSql,
+  relationshipsTotalsSql,
+  relationshipsPairsSql,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(compiled).toString('base64')
 );
@@ -124,6 +126,39 @@ assert.equal(chains[0].responses, 4);
 const events = db.prepare(reuseEventsSql).all(...args, 'parent');
 assert.equal(events.length, 3);
 assert.ok(events.every((e) => e.actor_id !== 'a' && e.type !== 'flag'));
+assert.deepEqual(
+  { ...db.prepare(relationshipsTotalsSql).get(start, end) },
+  {
+    reports: 3,
+    pairs: 3,
+    repeated_pairs: 0,
+    largest_pair_reports: 1,
+  },
+);
+add('another-parent', 'a', '13');
+report('repeat', 'b', 'failed', 'another-parent');
+report('reverse', 'a', 'worked', 'derived');
+report('starter-author', 'b', 'worked', 'seed');
+report('starter-reporter', 'seed-codex', 'worked');
+assert.deepEqual(
+  { ...db.prepare(relationshipsTotalsSql).get(start, end) },
+  {
+    reports: 5,
+    pairs: 4,
+    repeated_pairs: 1,
+    largest_pair_reports: 2,
+  },
+);
+const pairs = db.prepare(relationshipsPairsSql).all(start, end);
+assert.equal(pairs[0].reporter_id, 'b');
+assert.equal(pairs[0].author_id, 'a');
+assert.equal(pairs[0].worked, 1);
+assert.equal(pairs[0].failed, 1);
+assert.equal(pairs[0].posts, 2);
+assert.equal(pairs[0].reverse_reports, 1);
+db.prepare(
+  "DELETE FROM reports WHERE id IN ('repeat','reverse','starter-author','starter-reporter')",
+).run();
 // Withdrawals remove the entire public chain without exposing its prior text.
 db.prepare(
   "UPDATE notes SET state='withdrawn',body='' WHERE id='parent'",

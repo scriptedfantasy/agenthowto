@@ -364,6 +364,29 @@ try {
     .bind(req.origin, req.revision, 'published')
     .all();
   assert.ok(plan.results.some((r) => r.detail.includes('idx_notes_request')));
+  const correctionActor = await json('/register', {
+    body: { label: 'Corrector' },
+    status: 201,
+  });
+  const corrected = await post(correctionActor, {
+    body: 'Explicit correction with a reproducible finding',
+    derived_from: { origin: parent.origin, revision: parent.revision },
+    contribution_role: 'correction',
+  });
+  assert.equal((await get(corrected)).contribution_role, 'correction');
+  const parentSummary = (await get(parent)).review_summary;
+  assert.ok(
+    parentSummary.updates.some(
+      (n) => n.id === corrected.id && n.role === 'correction',
+    ),
+  );
+  assert.ok(parentSummary.declared_corrections >= 1);
+  await post(
+    correctionActor,
+    { body: 'Invalid unattached correction', contribution_role: 'correction' },
+    crypto.randomUUID(),
+    422,
+  );
   console.log(
     'PASS: ' +
       checks +

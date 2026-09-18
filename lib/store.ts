@@ -1,6 +1,7 @@
 import { getDb } from '@/db';
 import { ApiError, digest, cursor } from './validation';
 import { helpedRequest, requestStatusProjection } from './collaboration-sql';
+import { withReviewSummaries } from './note-review';
 import type { Note, Report, Actor } from './types';
 import {
   compactProjection,
@@ -28,16 +29,19 @@ export async function findNote(
 ): Promise<Note | null> {
   const n = await getDb()
     .prepare(
-      `SELECT n.*, ${requestStatusProjection}, (SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='worked') successes,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='failed') failures,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='flag') flags FROM notes n WHERE n.id=? ${includeWithdrawn ? '' : "AND n.state='published'"}`,
+      `SELECT n.*, ${requestStatusProjection} FROM notes n WHERE n.id=? ${includeWithdrawn ? '' : "AND n.state='published'"}`,
     )
     .bind(id)
     .first<Record<string, unknown>>();
-  return n ? unpack<Note>(n) : null;
+  if (!n) return null;
+  const note = unpack<Note>(n);
+  return note.state === 'withdrawn'
+    ? note
+    : (await withReviewSummaries([note]))[0];
 }
 async function queryNotes(
   params: URLSearchParams,
-  projection = requestStatusProjection +
-    ", n.*, (SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='worked') successes,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='failed') failures,(SELECT COUNT(*) FROM reports r WHERE r.note_id=n.id AND r.outcome='flag') flags",
+  projection = requestStatusProjection + ', n.*',
   projectionArgs: string[] = [],
 ) {
   const q = (params.get('q') || '').trim();
@@ -73,6 +77,17 @@ async function queryNotes(
   if (params.has('request_revision')) {
     clauses.push('n.request_revision=?');
     args.push(params.get('request_revision'));
+  }
+  for (const [parameter, field] of [
+    ['derived_origin', 'origin'],
+    ['derived_revision', 'revision'],
+  ]) {
+    if (params.has(parameter)) {
+      clauses.push(
+        `n.derived_from IS NOT NULL AND json_extract(n.derived_from,'$.${field}')=?`,
+      );
+      args.push(params.get(parameter));
+    }
   }
   for (const key of ['topic', 'tool', 'version', 'kind']) {
     if (params.get(key)) {
@@ -113,7 +128,12 @@ async function queryNotes(
 }
 export async function listNotes(params = new URLSearchParams()) {
   const result = await queryNotes(params);
-  return { ...result, items: result.items.map((row) => unpack<Note>(row)) };
+  return {
+    ...result,
+    items: await withReviewSummaries(
+      result.items.map((row) => unpack<Note>(row)),
+    ),
+  };
 }
 export async function listCompactNotes(params: URLSearchParams) {
   const projection = compactProjection(params.get('q') || '');
@@ -251,33 +271,63 @@ export async function exportRecords(offset: number, limit = 100) {
     )
     .bind(limit + 1, offset)
     .all<{ id: string; type: string }>();
-  const records: unknown[] = [];
-  for (const item of page.results.slice(0, limit)) {
-    if (item.type === 'note') {
-      const row = await db
-        .prepare('SELECT * FROM notes WHERE id=?')
-        .bind(item.id)
-        .first<Record<string, unknown>>();
-      if (!row) continue;
-      const n = unpack<Note>(row);
-      if (n.state === 'withdrawn')
-        records.push({
-          type: 'withdrawal',
-          id: n.id,
-          origin: n.origin,
-          revision: n.revision,
-          withdrawn_at: n.withdrawn_at,
-        });
-      else records.push({ type: 'note', ...n });
-    } else {
-      const row = await db
+  const items = page.results.slice(0, limit);
+  const ids = (type: string) =>
+    items.filter((item) => item.type === type).map((item) => item.id);
+  const noteIds = ids('note'),
+    reportIds = ids('report');
+  // Hydrate each kind in one query; a page does not cost one query per record.
+  const queries = [];
+  if (noteIds.length)
+    queries.push(
+      db
         .prepare(
-          "SELECT r.*,n.origin note_origin FROM reports r JOIN notes n ON n.id=r.note_id WHERE r.id=? AND n.state='published'",
+          `SELECT * FROM notes WHERE id IN (${noteIds.map(() => '?').join(',')})`,
         )
-        .bind(item.id)
-        .first<Record<string, unknown>>();
-      if (row) records.push({ type: 'report', ...unpack<Report>(row) });
+        .bind(...noteIds),
+    );
+  if (reportIds.length)
+    queries.push(
+      db
+        .prepare(
+          `SELECT r.*,n.origin note_origin FROM reports r JOIN notes n ON n.id=r.note_id WHERE r.id IN (${reportIds.map(() => '?').join(',')}) AND n.state='published'`,
+        )
+        .bind(...reportIds),
+    );
+  const results = queries.length
+    ? await db.batch<Record<string, unknown>>(queries)
+    : [];
+  const rows = new Map(
+    results.flatMap((result) =>
+      result.results.map(
+        (row) =>
+          [
+            ('note_id' in row ? 'report:' : 'note:') + String(row.id),
+            row,
+          ] as const,
+      ),
+    ),
+  );
+  const records: unknown[] = [];
+  for (const item of items) {
+    const row = rows.get(item.type + ':' + item.id);
+    if (!row) continue;
+    if (item.type === 'report') {
+      records.push({ type: 'report', ...unpack<Report>(row) });
+      continue;
     }
+    const n = unpack<Note>(row);
+    records.push(
+      n.state === 'withdrawn'
+        ? {
+            type: 'withdrawal',
+            id: n.id,
+            origin: n.origin,
+            revision: n.revision,
+            withdrawn_at: n.withdrawn_at,
+          }
+        : { type: 'note', ...n },
+    );
   }
   return { records, next: page.results.length > limit ? offset + limit : null };
 }

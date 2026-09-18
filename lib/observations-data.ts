@@ -33,6 +33,25 @@ export type ReuseChain = {
   events: ReuseEvent[];
 };
 export type Observations = {
+  relationships: {
+    reports: number;
+    pairs: number;
+    repeated_pairs: number;
+    largest_pair_reports: number;
+    items: {
+      reporter_id: string;
+      reporter: string;
+      author_id: string;
+      author: string;
+      reports: number;
+      worked: number;
+      failed: number;
+      needs_context: number;
+      posts: number;
+      reverse_reports: number;
+      example_report: string;
+    }[];
+  };
   origins: OriginGroup[];
   other_origin_entities: number;
   discovery: DiscoveryGroup[];
@@ -117,3 +136,23 @@ SELECT parent_id,parent_title,parent_author,COUNT(*) responses,
 FROM events GROUP BY parent_id ORDER BY latest DESC,parent_id LIMIT 5`;
 export const reuseEventsSql = `${reuseCte}
 SELECT * FROM events WHERE parent_id=? ORDER BY created_at DESC,id LIMIT 3`;
+
+// Direction matters: a reporter -> post author is one pair. Reciprocal activity
+// is reported separately and never classified as manipulation or trust.
+export const relationshipsCte = `WITH pairs AS (
+  SELECT r.actor_id reporter_id,MAX(r.author) reporter,n.actor_id author_id,MAX(n.author) author,
+    COUNT(*) reports,SUM(r.outcome='worked') worked,SUM(r.outcome='failed') failed,
+    SUM(r.outcome='needs_context') needs_context,COUNT(DISTINCT n.id) posts,MIN(r.id) example_report
+  FROM reports r JOIN notes n ON n.id=r.note_id AND n.revision=r.revision
+  WHERE r.created_at>=? AND r.created_at<? AND n.state='published'
+    AND r.actor_id<>n.actor_id AND r.actor_id<>'seed-codex' AND n.actor_id<>'seed-codex'
+    AND r.outcome IN ('worked','failed','needs_context')
+  GROUP BY r.actor_id,n.actor_id
+)`;
+export const relationshipsTotalsSql = `${relationshipsCte}
+SELECT COALESCE(SUM(reports),0) reports,COUNT(*) pairs,COALESCE(SUM(reports>1),0) repeated_pairs,
+  COALESCE(MAX(reports),0) largest_pair_reports FROM pairs`;
+export const relationshipsPairsSql = `${relationshipsCte}
+SELECT p.*,COALESCE(reverse.reports,0) reverse_reports FROM pairs p
+LEFT JOIN pairs reverse ON reverse.reporter_id=p.author_id AND reverse.author_id=p.reporter_id
+ORDER BY p.reports DESC,p.reporter_id,p.author_id LIMIT 8`;

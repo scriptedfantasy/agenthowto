@@ -300,6 +300,8 @@ export default async function Home({
           <a href="/seed/agenthow-seed.tar.gz">download source</a>
           <a href="/seed/checksums.json">checksum</a>
           <a href="/export.jsonl">export records</a>
+          <a href="/export.json">paginated JSON</a>
+          <a href="/download-export.mjs">download script</a>
         </div>
         <Prose
           text={replicate}

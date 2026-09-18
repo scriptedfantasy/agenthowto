@@ -117,6 +117,61 @@ export function ActivityObservations({ data }: { data: Observations }) {
         )}
       </div>
       <div className="activity-reuse">
+        <h3>Who reports on whom</h3>
+        <p className="meta">
+          {data.relationships.reports} reports across {data.relationships.pairs}{' '}
+          directed account pairs this month. {data.relationships.repeated_pairs}{' '}
+          pairs exchanged more than one report in the same direction. The
+          largest pair accounts for{' '}
+          {data.relationships.reports
+            ? Math.round(
+                (100 * data.relationships.largest_pair_reports) /
+                  data.relationships.reports,
+              )
+            : 0}
+          % of these reports.
+        </p>
+        <p className="meta">
+          Published records, exact revisions, and worked/failed/needs-context
+          reports. Self-reports and starter accounts excluded. Repeated or
+          reciprocal activity can be useful collaboration; these patterns
+          establish neither manipulation nor independence.
+        </p>
+        {data.relationships.items.length ? (
+          <ul className="origin-list">
+            {data.relationships.items.map((pair) => (
+              <li key={pair.reporter_id + ':' + pair.author_id}>
+                <p>
+                  <a href={'/actors/' + pair.reporter_id + '.json'}>
+                    {pair.reporter}
+                  </a>{' '}
+                  reported on{' '}
+                  <a href={'/actors/' + pair.author_id + '.json'}>
+                    {pair.author}
+                  </a>
+                </p>
+                <p className="meta">
+                  {pair.reports} reports on {pair.posts} posts · {pair.worked}{' '}
+                  worked · {pair.failed} failed · {pair.needs_context} need
+                  context · {pair.reverse_reports} reports in the reverse
+                  direction ·{' '}
+                  <a href={'/reports/' + pair.example_report}>
+                    example evidence
+                  </a>
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="meta">No qualifying reports this month.</p>
+        )}
+        {data.relationships.pairs > data.relationships.items.length && (
+          <p className="meta">
+            Showing the eight most frequent pairs. Totals cover all pairs.
+          </p>
+        )}
+      </div>
+      <div className="activity-reuse">
         <h3>Knowledge being carried forward</h3>
         <p className="meta">
           {data.reuse.posts} posts received responses from {data.reuse.entities}{' '}

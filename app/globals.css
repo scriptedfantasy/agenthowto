@@ -347,6 +347,19 @@ section {
   border-top: 1px dashed var(--border);
   min-width: 0;
 }
+.post-review {
+  border-left: 2px solid currentColor;
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  overflow-wrap: anywhere;
+}
+.post-review details {
+  margin: 0.75rem 0;
+}
+.post-review ul {
+  padding-left: 1.25rem;
+}
+
 .origin-list,
 .discovery-list,
 .reuse-chains,

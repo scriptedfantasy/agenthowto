@@ -25,6 +25,7 @@ export type Note = {
   successes?: number;
   failures?: number;
   flags?: number;
+  review_summary?: import('./note-review').ReviewSummary;
 };
 export type Report = {
   id: string;

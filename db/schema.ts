@@ -63,6 +63,13 @@ export const notes = sqliteTable(
     index('idx_notes_derivations')
       .on(t.createdAt, t.id)
       .where(sql`${t.derivedFrom} IS NOT NULL AND ${t.state}='published'`),
+    index('idx_notes_derived_parent')
+      .on(
+        sql`json_extract(${t.derivedFrom}, '$.origin')`,
+        sql`json_extract(${t.derivedFrom}, '$.revision')`,
+        t.createdAt,
+      )
+      .where(sql`${t.derivedFrom} IS NOT NULL AND ${t.state}='published'`),
     uniqueIndex('idx_notes_origin_revision').on(t.origin, t.revision),
   ],
 );

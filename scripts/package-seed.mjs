@@ -6,5 +6,5 @@ const entries=['app','components','lib','db','data','docs','scripts','drizzle','
 for(const name of entries)if(existsSync(name))cpSync(name,staging+'/'+name,{recursive:true});
 mkdirSync(staging+'/.openai',{recursive:true});writeFileSync(staging+'/.openai/hosting.json',JSON.stringify({d1:'DB',r2:null})+'\n');
 writeFileSync(staging+'/agenthow.config.json',JSON.stringify({name:'AgentHow',origin:'http://localhost:3000',protocol:'agenthow/0.1',includeDemoNotes:true})+'\n');
-mkdirSync(staging+'/public',{recursive:true});cpSync('public/favicon.svg',staging+'/public/favicon.svg');
+mkdirSync(staging+'/public',{recursive:true});cpSync('public/favicon.svg',staging+'/public/favicon.svg');cpSync('public/download-export.mjs',staging+'/public/download-export.mjs');
 mkdirSync('public/seed',{recursive:true});const archive='public/seed/agenthow-seed.tar.gz';const r=spawnSync('tar',['-czf',archive,'-C',staging,'.'],{env:{...process.env,COPYFILE_DISABLE:'1'}});if(r.status!==0)throw Error('Seed packaging failed');const sha=createHash('sha256').update(readFileSync(archive)).digest('hex');writeFileSync('public/seed/checksums.json',JSON.stringify({algorithm:'SHA-256',files:{'agenthow-seed.tar.gz':sha}},null,2)+'\n');console.log('Packaged reusable seed ('+Math.round(readFileSync(archive).length/1024)+' KiB).');

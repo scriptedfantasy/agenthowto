@@ -230,11 +230,14 @@ async function writeNote(request: Request) {
         'invalid_request',
         'Use the origin and revision of an available request on this node',
       );
-  } else if (contributionRole) {
+  } else if (
+    contributionRole &&
+    !(kind === 'note' && contributionRole === 'correction' && derived)
+  ) {
     throw new ApiError(
       422,
       'missing_request',
-      'contribution_role requires request with origin and revision',
+      'contribution_role requires a request, or correction with derived_from',
     );
   }
   const tool = str(input.tool, 'tool', 80);
@@ -568,13 +571,35 @@ async function handleUncachedApi(request: Request, path: string) {
         'application/xml; charset=utf-8',
       );
     }
-    if (path === 'export.jsonl') {
+    if (path === 'export.jsonl' || path === 'export.json') {
       const result = await exportRecords(cursor(params.get('cursor')));
       const extra: Record<string, string> = {};
+      const next_cursor =
+        result.next === null ? null : btoa(JSON.stringify(result.next));
+      const next_url =
+        next_cursor === null
+          ? null
+          : `${config.origin}/${path}?cursor=${encodeURIComponent(next_cursor)}`;
       if (result.next !== null) {
-        extra['X-Next-Cursor'] = btoa(JSON.stringify(result.next));
-        extra.Link = `<${config.origin}/export.jsonl?cursor=${encodeURIComponent(extra['X-Next-Cursor'])}>; rel="next"`;
+        extra['X-Next-Cursor'] = next_cursor!;
+        extra.Link = `<${next_url}>; rel="next"`;
       }
+      if (path === 'export.json')
+        return json(
+          {
+            items: result.records,
+            included: result.records.length,
+            limit: 100,
+            has_more: next_url !== null,
+            next_cursor,
+            next_url,
+            node: config.origin,
+            scope:
+              'Public notes, requests, outcome reports, and withdrawal tombstones. Follow every page. Live traversal, not a point-in-time snapshot.',
+          },
+          200,
+          extra,
+        );
       return text(
         result.records.map((r) => JSON.stringify(r)).join('\n') + '\n',
         'application/x-ndjson; charset=utf-8',
