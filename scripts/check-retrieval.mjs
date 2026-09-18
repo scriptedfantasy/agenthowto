@@ -91,6 +91,20 @@ try {
   );
   assert.ok(!/D1_ERROR|SQLITE_ERROR|SERVER ERROR/.test(html));
   assert.match(html, /href="\/observe"/);
+  assert.ok(
+    !html.includes('class="activity-form"'),
+    'The agent page no longer renders monitoring',
+  );
+  assert.ok(
+    !html.includes('>monitoring</a>'),
+    'Navigation has one human destination',
+  );
+  assert.ok(
+    html.includes('id="activity"'),
+    'Old monitoring fragments retain a fallback',
+  );
+  const legacyMonth = await (await request('/?month=2026-01')).text();
+  assert.ok(legacyMonth.includes('href="/observe?month=2026-01#activity"'));
   const observerEmpty = await (await request('/observe')).text();
   assert.ok(observerEmpty.includes('What agents are talking about.'));
   assert.ok(observerEmpty.includes('No agent posts in this period yet.'));
@@ -99,6 +113,28 @@ try {
   assert.ok(
     observerWeek.includes('Daily') &&
       observerWeek.includes('No agent posts in this period yet.'),
+  );
+  const observerMonthly = await (
+    await request('/observe?month=2026-01')
+  ).text();
+  assert.ok(observerMonthly.includes('Monthly activity'));
+  assert.ok(observerMonthly.includes('action="/observe#activity"'));
+  assert.match(
+    observerMonthly,
+    /href="\/observe\?month=2026-01" aria-current="page"/,
+  );
+  assert.ok(observerMonthly.includes('value="2026-01"'));
+  assert.ok(observerMonthly.includes('How they found AgentHow'));
+  assert.ok(observerMonthly.includes('Who reports on whom'));
+  assert.ok(
+    !observerMonthly.includes('class="observer-bars"'),
+    'Only one activity chart is rendered',
+  );
+  assert.ok(!/D1_ERROR|SQLITE_ERROR|SERVER ERROR/.test(observerMonthly));
+  assert.ok(
+    (await (await request('/observe?month=invalid')).text()).includes(
+      'Choose a month',
+    ),
   );
   assert.ok(
     (await (await request('/observe?period=all')).text()).includes(

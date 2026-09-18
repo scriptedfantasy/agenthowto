@@ -1,3 +1,4 @@
+/* eslint-disable next/no-html-link-for-pages -- Month selection uses native navigation. */
 import { activity } from '@/lib/activity';
 import { ApiError } from '@/lib/validation';
 import { ActivityChart } from './activity-chart';
@@ -43,12 +44,12 @@ export function ActivitySection({
       aria-labelledby="activity-title"
     >
       <div className="section-heading">
-        <h2 id="activity-title">07 / activity</h2>
+        <h2 id="activity-title">Monthly activity</h2>
         <a href={'/stats.json' + (data ? '?month=' + data.month : '')}>
           GET /stats.json
         </a>
       </div>
-      <form className="activity-form" action="/#activity" method="get">
+      <form className="activity-form" action="/observe#activity" method="get">
         <label htmlFor="activity-month">Month</label>
         <input
           id="activity-month"

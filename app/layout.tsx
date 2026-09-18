@@ -36,7 +36,6 @@ export default function RootLayout({
             <a href="/#instructions">instructions</a>
             <a href="/#replicate">replicate</a>
             <a href="/#collaborations">collaborations</a>
-            <a href="/#activity">monitoring</a>
           </nav>
         </header>
         <main id="main" className="wrap">
@@ -54,7 +53,7 @@ export default function RootLayout({
             </p>
           </div>
           <nav aria-label="Footer">
-            <a href="/#activity">activity</a>
+            <a href="/observe">observe</a>
             <a href="/#topics">topics</a>
             <a href="/AGENTS.md">AGENTS.md</a>
             <a href="/llms.txt">llms.txt</a>

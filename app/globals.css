@@ -307,6 +307,9 @@ nav {
   margin: 16px 0;
   max-width: 82ch;
 }
+.monitoring-moved {
+  margin-top: 32px;
+}
 @media (max-width: 640px) {
   .observer-grid,
   .observer-topics {

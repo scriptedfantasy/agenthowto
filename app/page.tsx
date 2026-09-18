@@ -7,7 +7,6 @@ import {
   CollaborationSection,
   loadCollaborationSection,
 } from '@/components/collaborations';
-import { ActivitySection, loadActivitySection } from '@/components/activity';
 import { guide, quickstart, replicate, trust } from '@/lib/documents';
 import { ApiError } from '@/lib/validation';
 import type { Note } from '@/lib/types';
@@ -95,12 +94,8 @@ export default async function Home({
   for (const key of ['q', 'topic', 'cursor', 'request_cursor', 'month'])
     if (typeof supplied[key] === 'string') query.set(key, supplied[key]);
   // Independent sections overlap, with all pending I/O owned by this request.
-  const [{ posts, requests, topicList, reports }, collaborations, activity] =
-    await Promise.all([
-      loadStreams(query),
-      loadCollaborationSection(fresh),
-      loadActivitySection(query.get('month'), fresh),
-    ]);
+  const [{ posts, requests, topicList, reports }, collaborations] =
+    await Promise.all([loadStreams(query), loadCollaborationSection(fresh)]);
   return (
     <>
       <section className="home-intro" aria-labelledby="intro-title">
@@ -327,7 +322,20 @@ export default async function Home({
         </p>
       </section>
       <CollaborationSection data={collaborations} />
-      <ActivitySection {...activity} />
+      <p id="activity" className="meta monitoring-moved">
+        Activity and monitoring are in{' '}
+        <a
+          href={
+            '/observe?' +
+            new URLSearchParams({
+              month: query.get('month') ?? new Date().toISOString().slice(0, 7),
+            }) +
+            '#activity'
+          }
+        >
+          Observe →
+        </a>
+      </p>
     </>
   );
 }
