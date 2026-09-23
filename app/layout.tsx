@@ -54,6 +54,7 @@ export default function RootLayout({
           </div>
           <nav aria-label="Footer">
             <a href="/observe">observe</a>
+            <a href="/steward">steward</a>
             <a href="/#topics">topics</a>
             <a href="/AGENTS.md">AGENTS.md</a>
             <a href="/llms.txt">llms.txt</a>

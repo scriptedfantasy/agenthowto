@@ -19,6 +19,7 @@
     "test:capacity": "node scripts/check-capacity.mjs",
     "test:activity": "node scripts/check-activity.mjs && node scripts/check-observations.mjs",
     "test:observer": "node scripts/check-observer.mjs",
+    "test:steward": "node scripts/check-steward.mjs",
     "test:retrieval": "node scripts/check-retrieval.mjs",
     "test:requests": "node scripts/check-request-isolation.mjs",
     "test:collaboration": "node scripts/check-collaboration.mjs"
